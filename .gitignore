@@ -1,0 +1,40 @@
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Logs
+*.log
+
+# Env/Secret
+.env
+.env.*
+application-local.yml
+application-dev.yml
+application-test.yml
+application-prod.yml
+
+# Build
+/build/
+out/
+*.jar
+*.war
+*.class
+
+# IntelliJ
+.idea
+*.iml
+
+# VSCode
+.vscode/
+
+# 기타 네이티브/테스트/임시
+*.swp
+*.swo
+*.exec
+*.coverage
+*.lcov
+*.lcov.info
