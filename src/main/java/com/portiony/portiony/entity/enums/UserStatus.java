@@ -1,4 +1,4 @@
-package com.portiony.portiony.enums;
+package com.portiony.portiony.entity.enums;
 
 public enum UserStatus {
     ACTIVE,     // 정상 활동

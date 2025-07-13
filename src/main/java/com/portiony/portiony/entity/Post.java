@@ -1,8 +1,8 @@
-package com.portiony.portiony;
+package com.portiony.portiony.entity;
 
 import com.portiony.portiony.entity.common.BaseEntity;
-import com.portiony.portiony.enums.PostStatus;
-import com.portiony.portiony.enums.DeliveryMethod;
+import com.portiony.portiony.entity.enums.PostStatus;
+import com.portiony.portiony.entity.enums.DeliveryMethod;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -29,7 +29,7 @@ public class Post extends BaseEntity {
     // 카테고리
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id", nullable = false)
-    private PostCategory category;
+    private com.portiony.portiony.PostCategory category;
 
     @Column(nullable = false, length = 50)
     private String title;

@@ -1,4 +1,4 @@
-package com.portiony.portiony;
+package com.portiony.portiony.entity;
 
 import com.portiony.portiony.entity.common.BaseEntity;
 import jakarta.persistence.*;
@@ -48,10 +48,10 @@ public class UserPreference extends BaseEntity {
     private User user;
 
     // 연관관계 편의 메서드
-    public void setUser(User user) {
-        this.user = user;
-        if (!user.getPreferences().contains(this)) {
-            user.getPreferences().add(this);
-        }
-    }
+//    public void setUser(User user) {
+//        this.user = user;
+//        if (!user.getPreferences().contains(this)) {
+//            user.getPreferences().add(this);
+//        }
+//    }
 }

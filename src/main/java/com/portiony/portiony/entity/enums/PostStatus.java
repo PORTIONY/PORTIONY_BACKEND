@@ -1,4 +1,4 @@
-package com.portiony.portiony.enums;
+package com.portiony.portiony.entity.enums;
 
 public enum PostStatus {
     PROGRESS,    // 모집 진행 중

@@ -1,4 +1,4 @@
-package com.portiony.portiony;
+package com.portiony.portiony.entity;
 
 import com.portiony.portiony.entity.common.BaseEntity;
 import jakarta.persistence.*;

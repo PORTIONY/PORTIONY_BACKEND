@@ -1,46 +1,50 @@
-package com.portiony.portiony;
+package com.portiony.portiony.entity;
 
 import com.portiony.portiony.entity.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
-
 @Entity
-@Table(name = "post_like")
+@Table(name = "post_comment")
 @Getter
 @NoArgsConstructor
-public class PostLike extends BaseEntity {
+public class PostComment extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // 찜한 게시글
+    // 🔁 게시글(Post)과 양방향 ManyToOne
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "post_id", nullable = false)
     private Post post;
 
-    // 찜한 사용자
+    // 댓글 작성자
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    // 찜한 시점 (createdAt: BaseEntity로 관리)
+    @Column(nullable = false, columnDefinition = "TEXT")
+    private String content;
+
+    @Column(name = "is_delete", nullable = false)
+    private boolean isDeleted = false;
+
+    // BaseEntity의 createdAt, updatedAt에 컬럼명 지정
     @Override
-    @Column(name = "created_at", updatable = false)
-    public LocalDateTime getCreatedAt() {
+    @Column(name = "create_at", updatable = false)
+    public java.time.LocalDateTime getCreatedAt() {
         return super.getCreatedAt();
     }
 
     @Override
     @Column(name = "updated_at")
-    public LocalDateTime getUpdatedAt() {
+    public java.time.LocalDateTime getUpdatedAt() {
         return super.getUpdatedAt();
     }
 
-    // 연관관계 편의 메서드
+    // 연관관계 설정 메서드
     public void setPost(Post post) {
         this.post = post;
     }

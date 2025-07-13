@@ -1,4 +1,4 @@
-package com.portiony.portiony;
+package com.portiony.portiony.entity;
 
 import jakarta.persistence.*;
 import lombok.Getter;
