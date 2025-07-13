@@ -32,6 +32,6 @@ public class ChatMessage extends BaseEntity {
     @JoinColumn(name = "sender_id", nullable = false)
     private User sender;
 
-    @OneToMany(mappedBy = "chatMessage", cascade = CascadeType.ALL)
-    private List<ChatImage> chatImageList = new ArrayList<>();
+//    @OneToMany(mappedBy = "chatMessage", cascade = CascadeType.ALL)
+//    private List<ChatImage> chatImageList = new ArrayList<>();
 }

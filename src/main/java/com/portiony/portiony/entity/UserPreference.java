@@ -2,15 +2,16 @@ package com.portiony.portiony.entity;
 
 import com.portiony.portiony.entity.common.BaseEntity;
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "user_preference")
 @Getter
-@NoArgsConstructor
+@Setter
+@Builder
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
 public class UserPreference extends BaseEntity {
 
     @Id

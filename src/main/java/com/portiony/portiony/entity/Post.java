@@ -4,17 +4,18 @@ import com.portiony.portiony.entity.common.BaseEntity;
 import com.portiony.portiony.entity.enums.PostStatus;
 import com.portiony.portiony.entity.enums.DeliveryMethod;
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "post")
 @Getter
-@NoArgsConstructor
+@Setter
+@Builder
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
 public class Post extends BaseEntity {
 
     @Id
@@ -29,7 +30,7 @@ public class Post extends BaseEntity {
     // 카테고리
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id", nullable = false)
-    private com.portiony.portiony.PostCategory category;
+    private PostCategory category;
 
     @Column(nullable = false, length = 50)
     private String title;
@@ -63,49 +64,4 @@ public class Post extends BaseEntity {
     @Column(name = "is_deleted", nullable = false)
     private boolean isDeleted = false;
 
-    // 게시글 이미지들 (양방향)
-    @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<PostImage> images = new ArrayList<>();
-
-    public void addImage(PostImage image) {
-        images.add(image);
-        image.setPost(this);
-    }
-
-    public void removeImage(PostImage image) {
-        images.remove(image);
-        image.setPost(null);
-    }
-
-    // 댓글 목록 (양방향)
-    @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<PostComment> comments = new ArrayList<>();
-
-    public void addComment(PostComment comment) {
-        comments.add(comment);
-        comment.setPost(this);
-    }
-
-    public void removeComment(PostComment comment) {
-        comments.remove(comment);
-        comment.setPost(null);
-    }
-
-    // 카테고리 setter (편의 메서드용)
-    public void setCategory(PostCategory category) {
-        this.category = category;
-    }
-
-    // created_at, updated_at 컬럼명 매핑
-    @Override
-    @Column(name = "create_at", updatable = false)
-    public LocalDateTime getCreatedAt() {
-        return super.getCreatedAt();
-    }
-
-    @Override
-    @Column(name = "updated_at")
-    public LocalDateTime getUpdatedAt() {
-        return super.getUpdatedAt();
-    }
 }

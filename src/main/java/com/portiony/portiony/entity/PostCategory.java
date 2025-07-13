@@ -19,6 +19,6 @@ public class PostCategory {
     @Column(nullable = false, length = 15)
     private String title;
 
-    @OneToMany(mappedBy = "postCategory", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Post> postList = new ArrayList<>();
+//    @OneToMany(mappedBy = "postCategory", cascade = CascadeType.ALL, orphanRemoval = true)
+//    private List<Post> postList = new ArrayList<>();
 }

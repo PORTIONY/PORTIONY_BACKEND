@@ -2,13 +2,14 @@ package com.portiony.portiony.entity;
 
 import com.portiony.portiony.entity.common.BaseEntity;
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 @Entity
-@Table(name = "post_comment")
 @Getter
-@NoArgsConstructor
+@Setter
+@Builder
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
 public class PostComment extends BaseEntity {
 
     @Id
@@ -31,25 +32,13 @@ public class PostComment extends BaseEntity {
     @Column(name = "is_delete", nullable = false)
     private boolean isDeleted = false;
 
-    // BaseEntity의 createdAt, updatedAt에 컬럼명 지정
-    @Override
-    @Column(name = "create_at", updatable = false)
-    public java.time.LocalDateTime getCreatedAt() {
-        return super.getCreatedAt();
-    }
 
-    @Override
-    @Column(name = "updated_at")
-    public java.time.LocalDateTime getUpdatedAt() {
-        return super.getUpdatedAt();
-    }
-
-    // 연관관계 설정 메서드
-    public void setPost(Post post) {
-        this.post = post;
-    }
-
-    public void setUser(User user) {
-        this.user = user;
-    }
+//    // 연관관계 설정 메서드
+//    public void setPost(Post post) {
+//        this.post = post;
+//    }
+//
+//    public void setUser(User user) {
+//        this.user = user;
+//    }
 }
