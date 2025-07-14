@@ -30,19 +30,6 @@ public class UserPreference extends BaseEntity {
     @Column(name = "situation")
     private Integer situation;
 
-    // 생성 시각
-    @Override
-    @Column(name = "created_at", updatable = false)
-    public LocalDateTime getCreatedAt() {
-        return super.getCreatedAt();
-    }
-
-    @Override
-    @Column(name = "updated_at")
-    public LocalDateTime getUpdatedAt() {
-        return super.getUpdatedAt();
-    }
-
     // 사용자 연결
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)

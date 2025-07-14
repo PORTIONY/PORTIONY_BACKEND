@@ -29,7 +29,8 @@ public class PostComment extends BaseEntity {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
-    @Column(name = "is_delete", nullable = false)
+    @Builder.Default
+    @Column(name = "is_delete", nullable = false, columnDefinition = "boolean default false")
     private boolean isDeleted = false;
 
 

@@ -15,7 +15,9 @@ public class Review extends BaseEntity  {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private Double star = 0.0;
+    @Builder.Default
+    @Column(nullable = false, columnDefinition = "int default 0.0")
+    private double star = 0.0;
 
     private Integer choice;
 
