@@ -17,7 +17,7 @@ jobs:
           project: dorlek856/portiony
           stage: main
           yaml: |
-            name: PORTIONY_BACKEND
+            name: portiony-backend
             app: java@17
             options:
               ports: "8080"
