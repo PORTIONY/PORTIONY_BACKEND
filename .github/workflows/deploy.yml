@@ -39,5 +39,5 @@ jobs:
               buildenv: []
             context:
               git:
-                url: git@github.com:${{ github.repository }}.git
+                url: https://github.com/${{ github.repository }}.git
                 ref: ${{ github.ref }}
