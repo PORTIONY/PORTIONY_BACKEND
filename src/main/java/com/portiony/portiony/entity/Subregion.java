@@ -1,6 +1,5 @@
 package com.portiony.portiony.entity;
-import jakarta.persistence.*;
-import lombok.*;
+import jakarta.persistence.*;import lombok.*;
 
 @Entity
 @Getter

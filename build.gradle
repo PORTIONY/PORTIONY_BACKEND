@@ -34,6 +34,10 @@ dependencies {
 
 	//swagger
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.0.2'
+
+	//ChatGPT AI
+	implementation 'com.squareup.okhttp3:okhttp:4.10.0'
+	implementation 'com.fasterxml.jackson.core:jackson-databind:2.15.0'
 }
 
 tasks.named('test') {
