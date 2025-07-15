@@ -21,7 +21,8 @@ public class ChatMessage extends BaseEntity {
     @Column(columnDefinition = "TEXT", nullable = false)
     private String content;
 
-    @Column(name = "is_read", nullable = false)
+    @Builder.Default
+    @Column(name = "is_read", nullable = false, columnDefinition = "boolean default false")
     private boolean isRead = false;
 
     @ManyToOne(fetch = FetchType.LAZY)

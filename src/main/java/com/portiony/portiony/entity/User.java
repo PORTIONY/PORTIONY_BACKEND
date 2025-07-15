@@ -34,16 +34,27 @@ public class User extends BaseEntity {
     @Column(name = "profile_image", length = 255)
     private String profileImage;
 
+    @Builder.Default
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @Column(nullable = false, length = 20, columnDefinition = "varchar(20) default 'ACTIVE'")
     private UserStatus status = UserStatus.ACTIVE;
 
+    @Builder.Default
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 10)
+    @Column(nullable = false, length = 10, columnDefinition = "varchar(10) default 'USER'")
     private UserRole role = UserRole.USER;
 
-    @Column(nullable = false)
+    @Builder.Default
+    @Column(nullable = false, columnDefinition = "double default 0.0")
     private double star = 0.0;
+
+    @Builder.Default
+    @Column(nullable = false, columnDefinition = "int default 0")
+    private int salesCount = 0;
+
+    @Builder.Default
+    @Column(nullable = false, columnDefinition = "int default 0")
+    private int purchase_count = 0;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "region_id", nullable = false)

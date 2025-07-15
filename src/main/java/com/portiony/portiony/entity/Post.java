@@ -3,6 +3,7 @@ package com.portiony.portiony.entity;
 import com.portiony.portiony.entity.common.BaseEntity;
 import com.portiony.portiony.entity.enums.PostStatus;
 import com.portiony.portiony.entity.enums.DeliveryMethod;
+import com.portiony.portiony.entity.enums.UserRole;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -50,18 +51,21 @@ public class Post extends BaseEntity {
     @Column(nullable = false)
     private LocalDateTime deadline;
 
+    @Builder.Default
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @Column(nullable = false, length = 20, columnDefinition = "varchar(20) default 'PROGRESS'")
     private PostStatus status = PostStatus.PROGRESS;
 
+    @Builder.Default
     @Enumerated(EnumType.STRING)
-    @Column(name = "delivery_method", nullable = false, length = 20)
+    @Column(name = "delivery_method", nullable = false, length = 20, columnDefinition = "varchar(20) default 'ALL'")
     private DeliveryMethod deliveryMethod = DeliveryMethod.ALL;
 
     @Column(name = "is_agree", nullable = false)
     private boolean isAgree;
 
-    @Column(name = "is_deleted", nullable = false)
+    @Builder.Default
+    @Column(name = "is_deleted", nullable = false, columnDefinition = "boolean default false")
     private boolean isDeleted = false;
 
 }

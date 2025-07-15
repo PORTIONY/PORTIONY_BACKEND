@@ -20,8 +20,9 @@ public class ChatRoom extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Builder.Default
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 30)
+    @Column(nullable = false, length = 30, columnDefinition = "varchar(30) default 'WAITING'")
     private ChatStatus status = ChatStatus.WAITING;
 
     @Column(name = "finish_date")

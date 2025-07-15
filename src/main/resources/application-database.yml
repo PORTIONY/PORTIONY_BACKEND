@@ -9,17 +9,18 @@ spring:
     hikari:
       maximum-pool-size: 20
       minimum-idle: 10
+
 ---
-#spring:
-#  config:
-#    activate:
-#      on-profile: dev
-#  datasource:
-#    username: ${DEV_DB_USERNAME}
-#    password: ${DEV_DB_PASSWORD}
-#    url: ${DEV_DB_URL}
-#    driver-class-name: org.mariadb.jdbc.Driver
-#    hikari:
-#      maximum-pool-size: 20
-#      minimum-idle: 10
----
+
+spring:
+  config:
+    activate:
+      on-profile: dev
+  datasource:
+    username: ${DEV_DB_USERNAME}
+    password: ${DEV_DB_PASSWORD}
+    url: ${DEV_DB_URL}
+    driver-class-name: org.mariadb.jdbc.Driver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 10

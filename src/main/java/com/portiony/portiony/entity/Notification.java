@@ -24,8 +24,9 @@ public class Notification extends BaseEntity {
     @Column(nullable = false, length = 255)
     private String message;
 
-    // 읽음 여부
-    @Column(nullable = false)
+
+    @Builder.Default
+    @Column(name = "is_read", nullable = false, columnDefinition = "boolean default false")
     private boolean isRead = false;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -33,6 +34,10 @@ public class Notification extends BaseEntity {
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "chat_room_id", nullable = false)
+    @JoinColumn(name = "chat_room_id")
     private ChatRoom chatRoom;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "post_id")
+    private Post post;
 }

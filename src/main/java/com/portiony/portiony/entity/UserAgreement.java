@@ -20,7 +20,7 @@ public class UserAgreement extends BaseEntity {
 
     // 동의 여부
     @Column(name = "is_agreed", nullable = false)
-    private boolean isAgreed;
+    private Boolean isAgreed;
 
     // 사용자
     @ManyToOne(fetch = FetchType.LAZY)
