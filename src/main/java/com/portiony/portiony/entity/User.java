@@ -60,6 +60,37 @@ public class User extends BaseEntity {
     @JoinColumn(name = "region_id", nullable = false)
     private Region region;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "subregion_id", nullable = false)
+    private Subregion subregion;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "dong_id", nullable = false)
+    private Dong dong;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // 추후 양방향 매핑 고려를 위해 추가해 놓았으니 삭제하지 말아주세요!
 // 사용자 선호 정보
 //    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
