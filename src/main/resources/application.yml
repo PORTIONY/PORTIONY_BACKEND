@@ -23,7 +23,8 @@ spring:
   profiles:
     include:
       - database
-#      - local
+      - local
+
   security:
     oauth2:
       client:
@@ -42,12 +43,6 @@ spring:
 
 #frontend:
 #  domain: ${FRONT_DOMAIN}
-#
-#naver:
-#  ocr:
-#    general:
-#      url: ${OCR_URL}
-#    secret: ${OCR_SECRET_KEY}
 #
 #jwt:
 #  secret: ${JWT_SECRET}

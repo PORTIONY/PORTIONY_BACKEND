@@ -1,0 +1,43 @@
+name: Deploy to cloudtype
+on:
+  push:
+    branches:
+      - main
+      - develop
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Deploy
+        uses: cloudtype-github-actions/deploy@v1
+        with:
+          token: ${{ secrets.CLOUDTYPE_TOKEN }}
+          project: dorlek856/portiony
+          stage: main
+          yaml: |
+            name: portiony-backend
+            app: java@17
+            options:
+              ports: 8080
+              env:
+                - name: SPRING_PROFILES_ACTIVE
+                  value: dev
+                - name: DB_USERNAME
+                  value: ${{ secrets.DB_USERNAME }}
+                - name: DB_PASSWORD
+                  value: ${{ secrets.DB_PASSWORD }}
+                - name: DB_URL
+                  value: ${{ secrets.DB_URL }}
+                - name: DEV_DB_USERNAME
+                  value: ${{ secrets.DEV_DB_USERNAME }}
+                - name: DEV_DB_PASSWORD
+                  value: ${{ secrets.DEV_DB_PASSWORD }}
+                - name: DEV_DB_URL
+                  value: ${{ secrets.DEV_DB_URL }}
+              buildenv: []
+            context:
+              git:
+                url: https://github.com/${{ github.repository }}.git
+                ref: ${{ github.ref }}
