@@ -12,19 +12,17 @@ public class ChatRequestDTO {
     @Getter
     public static class CreateRoomRqDTO{
         @NotNull
-        @NotBlank
         Long postId;
 
         @NotNull
-        @NotBlank
         Long buyerId;
     }
 
     @Getter
-    public static class CreateChatRqDTO{
-        private Long chatRoomId;       // 어떤 방에서
-        private Long senderId;         // 누가
-        private String content;        // 무슨 말을
+    public static class ChatMessageDTO{
+        private Long chatRoomId;
+        private Long senderId; //추후 토큰에서 빼오기
+        private String content;
     }
 }
 
