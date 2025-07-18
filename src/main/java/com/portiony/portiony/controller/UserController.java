@@ -119,7 +119,7 @@ public class UserController {
         return userService.getMyPurchases(userId, sort, priceOrder, page, size);
     }
 
-    // 내 판매 내역 조회 (특정 유저ID)
+    // 판매 내역 조회 (특정 유저)
     @GetMapping("/{userId}/sales")
     public PageResponse<SaleHistoryResponse> getSales(
             @RequestHeader("Authorization") String authHeader,
@@ -148,7 +148,7 @@ public class UserController {
         return userService.getReviewsByMe(userId, type, sort, status, page, size);
     }
 
-    // 다른 사람 후기 조회
+    // 받은 후기 조회
     @GetMapping("/reviews/{userId}")
     public PageResponse<ReviewHistoryResponse> getReviewsByOther(
             @RequestHeader("Authorization") String authHeader,
