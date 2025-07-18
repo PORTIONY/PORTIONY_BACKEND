@@ -4,6 +4,7 @@ on:
     branches:
       - main
       - develop
+      - feature/chat
 jobs:
   deploy:
     runs-on: ubuntu-latest
