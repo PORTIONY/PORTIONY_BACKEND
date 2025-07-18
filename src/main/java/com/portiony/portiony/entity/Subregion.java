@@ -1,4 +1,5 @@
 package com.portiony.portiony.entity;
+
 import jakarta.persistence.*;
 import lombok.*;
 
