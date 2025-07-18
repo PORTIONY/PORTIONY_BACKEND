@@ -48,6 +48,10 @@ dependencies {
 
 	// OAuth2 관련 (카카오로그인)
 	implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
+
+	//chat
+	implementation 'org.springframework.boot:spring-boot-starter-websocket'
+	implementation 'com.fasterxml.jackson.core:jackson-databind'
 }
 
 tasks.named('test') {
