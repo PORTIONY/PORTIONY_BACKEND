@@ -1,9 +1,9 @@
 package com.portiony.portiony.controller;
 
-import com.portiony.portiony.dto.*;
 import com.portiony.portiony.dto.common.PageResponse;
 import com.portiony.portiony.dto.user.*;
 import com.portiony.portiony.entity.User;
+import com.portiony.portiony.entity.enums.PostStatus;
 import com.portiony.portiony.repository.UserRepository;
 import com.portiony.portiony.service.UserService;
 import com.portiony.portiony.util.JwtUtil;
@@ -110,13 +110,14 @@ public class UserController {
     @GetMapping("/me/purchases")
     public PageResponse<PurchaseHistoryResponse> getMyPurchases(
             @RequestHeader("Authorization") String authHeader,
-            @RequestParam(defaultValue = "recent") String sort,
-            @RequestParam(required = false) String priceOrder,
+            @RequestParam(defaultValue = "recent") String dateSort,
+            @RequestParam(required = false) String priceSort,
+            @RequestParam(required = false) PostStatus status,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "12") int size
     ) {
         Long userId = extrctUserIdFromToken(authHeader);
-        return userService.getMyPurchases(userId, sort, priceOrder, page, size);
+        return userService.getMyPurchases(userId, dateSort, priceSort, status, page, size);
     }
 
     // 판매 내역 조회 (특정 유저)
@@ -124,14 +125,14 @@ public class UserController {
     public PageResponse<SaleHistoryResponse> getSales(
             @RequestHeader("Authorization") String authHeader,
             @PathVariable Long userId,
-            @RequestParam(required = false) String sort,
-            @RequestParam(required = false) String priceOrder,
-            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String dateSort,
+            @RequestParam(required = false) String priceSort,
+            @RequestParam(required = false) PostStatus status,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "12") int size
     ) {
         Long myId = extrctUserIdFromToken(authHeader);
-        return userService.getMySales(myId, userId, sort, priceOrder, status, page, size);
+        return userService.getMySales(myId, userId, dateSort, priceSort, status, page, size);
     }
 
     // 내가 작성한 후기 조회
@@ -139,13 +140,13 @@ public class UserController {
     public PageResponse<ReviewHistoryResponse> getReviewsByMe(
             @RequestHeader("Authorization") String authHeader,
             @RequestParam(required = false) String type,
-            @RequestParam(required = false) String sort,
-            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String reviewSort,
+            @RequestParam(required = false) boolean writtenStatus,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
         Long userId = extrctUserIdFromToken(authHeader);
-        return userService.getReviewsByMe(userId, type, sort, status, page, size);
+        return userService.getReviewsByMe(userId, type, reviewSort, writtenStatus, page, size);
     }
 
     // 받은 후기 조회
@@ -165,10 +166,10 @@ public class UserController {
 
     // 찜 목록 조회
     @GetMapping("/me/wishlist")
-    public PageResponse<PostLikeResponse> getMyWishlist(
+    public PageResponse<PostLikeHistoryResponse> getMyWishlist(
             @RequestHeader("Authorization") String authHeader,
             @RequestParam(required = false) String sort,
-            @RequestParam(required = false) String status,
+            @RequestParam(required = false) PostStatus status,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "12") int size
     ) {
