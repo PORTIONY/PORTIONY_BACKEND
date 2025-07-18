@@ -1,4 +1,4 @@
-package com.portiony.portiony.dto.Chat;
+package com.portiony.portiony.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
