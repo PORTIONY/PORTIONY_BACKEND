@@ -1,13 +1,13 @@
 package com.portiony.portiony.service;
 
-import com.portiony.portiony.dto.Chat.ChatRequestDTO;
-import com.portiony.portiony.dto.Chat.ChatResponseDTO;
+import com.portiony.portiony.dto.ChatRequestDTO;
+import com.portiony.portiony.dto.ChatResponseDTO;
 import com.portiony.portiony.entity.ChatMessage;
 import com.portiony.portiony.entity.ChatRoom;
 import com.portiony.portiony.entity.Post;
 import com.portiony.portiony.entity.User;
-import com.portiony.portiony.repository.ChatMessageRopository;
-import com.portiony.portiony.repository.ChatRepository;
+import com.portiony.portiony.repository.ChatMessageRepository;
+import com.portiony.portiony.repository.ChatRoomRepository;
 import com.portiony.portiony.repository.PostRepository;
 import com.portiony.portiony.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -16,8 +16,8 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 public class ChatService {
-    private final ChatRepository chatRepository;
-    private final ChatMessageRopository chatMessageRopository;
+    private final ChatRoomRepository chatRoomRepository;
+    private final ChatMessageRepository chatMessageRepository;
     private final PostRepository postRepository;
     private final UserRepository userRepository;
 
@@ -37,7 +37,7 @@ public class ChatService {
         }
 
         //동일 채팅방 있는 지 검사
-        ChatRoom chatRoom = chatRepository.findByPostIdAndBuyerId(request.getPostId(), request.getBuyerId())
+        ChatRoom chatRoom = chatRoomRepository.findByPostIdAndBuyerId(request.getPostId(), request.getBuyerId())
                 .orElseGet(() -> {
                     //없으면 새로 생성
                     ChatRoom newRoom = ChatRoom.builder()
@@ -45,7 +45,7 @@ public class ChatService {
                             .buyer(buyer)
                             .seller(seller)
                             .build();
-                    return chatRepository.save(newRoom);
+                    return chatRoomRepository.save(newRoom);
                 });
 
         return ChatResponseDTO.CreateRoomRsDTO.builder()
@@ -55,7 +55,7 @@ public class ChatService {
 
     //메시지 전송
     public ChatResponseDTO.ChatMessageRsDTO saveMessage(ChatRequestDTO.ChatMessageDTO dto) {
-        ChatRoom room = chatRepository.findById(dto.getChatRoomId())
+        ChatRoom room = chatRoomRepository.findById(dto.getChatRoomId())
                 .orElseThrow(() -> new IllegalArgumentException("채팅방 없음"));
         User sender = userRepository.findById(dto.getSenderId())
                 .orElseThrow(() -> new IllegalArgumentException("보낸 유저 없음"));
@@ -75,7 +75,7 @@ public class ChatService {
                 .isRead(false)
                 .build();
 
-        ChatMessage saved = chatMessageRopository.save(message);
+        ChatMessage saved = chatMessageRepository.save(message);
 
         return ChatResponseDTO.ChatMessageRsDTO.builder()
                 .messageId(saved.getId())

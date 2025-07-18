@@ -1,7 +1,7 @@
 package com.portiony.portiony.controller;
 
-import com.portiony.portiony.dto.Chat.ChatRequestDTO;
-import com.portiony.portiony.dto.Chat.ChatResponseDTO;
+import com.portiony.portiony.dto.ChatRequestDTO;
+import com.portiony.portiony.dto.ChatResponseDTO;
 import com.portiony.portiony.service.ChatService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.handler.annotation.MessageMapping;
