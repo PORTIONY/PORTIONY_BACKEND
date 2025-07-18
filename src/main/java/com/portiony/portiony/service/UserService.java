@@ -37,11 +37,13 @@ public class UserService {
     private final PostLikeRepository postLikeRepository;
     private final PasswordEncoder passwordEncoder;
 
+    // 프로필 조회
     private User findUserById(Long userId) {
         return userRepository.findById(userId).
                 orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,"사용자를 찾을 수 없습니다."));
     }
 
+    // 프로필 조회
     public UserProfileResponse getUserProfile(Long userId) {
         User user = findUserById(userId);
         // TODO: userId 기반 유저 조회
@@ -59,6 +61,7 @@ public class UserService {
         );
     }
 
+    // 프로필 편집 조회
     public EditProfileViewResponse editProfileView(Long userId) {
         User user = findUserById(userId);
 
@@ -70,6 +73,7 @@ public class UserService {
                 .build();
     }
 
+    // 프로필 편집
     @Transactional
     public void editProfile(Long userId, EditProfileRequest request) {
         User user = findUserById(userId);
@@ -100,6 +104,7 @@ public class UserService {
         }
     }
 
+    // 회원 탈퇴
     @Transactional
     public void deleteUser(Long userId, DeleteUserRequest request) {
         User user = findUserById(userId);
@@ -111,6 +116,7 @@ public class UserService {
         user.setStatus(UserStatus.WITHDRAWN);
     }
 
+    // 기본 정렬
     private Sort getSort(String sort, String priceOrder) {
         Sort result = Sort.by(Sort.Direction.DESC, "post.createdAt");
 
@@ -129,6 +135,7 @@ public class UserService {
         return result;
     }
 
+    // 내 구매 내역 조회
     public PageResponse<PurchaseHistoryResponse> getMyPurchases(Long userId, String sort, String priceOrder, int page, int size) {
         Pageable pageable = PageRequest.of(page - 1, size, getSort(sort, priceOrder));
 
@@ -155,6 +162,7 @@ public class UserService {
         return new PageResponse<>(purchases.getTotalElements(), purchases.getNumber() + 1, content);
     }
 
+    // 판매 내역 조회 (특정 유저)
     public PageResponse<SaleHistoryResponse> getMySales(Long myId, Long userId, String sort, String priceOrder, String statusFilter, int page, int size) {
 
         if (!myId.equals(userId)) {
@@ -196,6 +204,7 @@ public class UserService {
         return new PageResponse<>(sales.getTotalElements(), sales.getNumber() + 1, content);
     }
 
+    // 리뷰 정렬
     private Sort getReviewSort(String starSort, String reviewSort) {
         Sort result = Sort.unsorted();
 
@@ -214,6 +223,7 @@ public class UserService {
         return result;
     }
 
+    // 내가 쓴 후기 조회
     public PageResponse<ReviewHistoryResponse> getReviewsByMe(Long userId, String type, String sort, String writtenStatus, int page, int size) {
         Sort sortOption = getSort(sort, type);
         Pageable pageable = PageRequest.of(page -1, size, sortOption);
@@ -242,6 +252,7 @@ public class UserService {
         return new PageResponse<>(reviews.getTotalElements(), reviews.getNumber() + 1, content);
     }
 
+    // 받은 후기 조회
     public PageResponse<ReviewHistoryResponse> getReviewsByOther(Long myId, Long userId, String type, String reviewSort, String starSort, int page, int size) {
 
         if (!myId.equals(userId)) {
@@ -275,6 +286,7 @@ public class UserService {
         return new PageResponse<>(reviews.getTotalElements(), reviews.getNumber() + 1, content);
     }
 
+    // 찜 정렬
     private Sort getWishlistSort(String sort) {
         switch (sort) {
             // 최신 찜순
@@ -299,6 +311,7 @@ public class UserService {
         }
     }
 
+    // 찜 내역 조회
     public PageResponse<PostLikeResponse> getWishlist(Long userId, String sort, String status,int page, int size) {
         Pageable pageable = PageRequest.of(page - 1, size, getWishlistSort(sort));
         Specification<PostLike> specification = PostLikeSpecifications.filterByStatusAndUser(userId, status);
@@ -325,6 +338,7 @@ public class UserService {
         return new PageResponse<>(result.getTotalElements(), result.getNumber() + 1, content);
     }
 
+    // 리뷰 등록
     @Transactional
     public void registerReview(Long userId, Long reviewId,ReviewRegisterRequest request) {
         Review review = reviewRepository.findById(reviewId).get();
@@ -346,6 +360,7 @@ public class UserService {
         }
     }
 
+    // 리뷰 삭제
     @Transactional
     public void deleteReview(Long userId, Long reviewId) {
         Review review = reviewRepository.findById(reviewId).get();

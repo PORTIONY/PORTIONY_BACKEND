@@ -2,6 +2,7 @@ package com.portiony.portiony.specification;
 
 import com.portiony.portiony.entity.Post;
 import com.portiony.portiony.entity.PostLike;
+import com.portiony.portiony.entity.User;
 import com.portiony.portiony.entity.enums.PostStatus;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.Predicate;
