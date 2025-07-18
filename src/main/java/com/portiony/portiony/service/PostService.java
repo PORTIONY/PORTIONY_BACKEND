@@ -1,10 +1,10 @@
 package com.portiony.portiony.service;
 
+import com.portiony.portiony.converter.PostConverter;
 import com.portiony.portiony.dto.Post.CreatePostRequest;
 import com.portiony.portiony.entity.Post;
 import com.portiony.portiony.entity.PostCategory;
 import com.portiony.portiony.entity.User;
-import com.portiony.portiony.entity.enums.DeliveryMethod;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -17,29 +17,17 @@ public class PostService {
 
     @Transactional
     public Long createPost(CreatePostRequest request) {
-        // 더미 유저
+        //TODO : 현재는 더미 데이터를 사용 중
+        //후에 로그인한 사용자와 지정한 카테고리를 Repository로 조회해서 사용해야 함
         User currentUser = User.builder()
                 .id(15L)
                 .build();
-
-        // 더미 카테고리
         PostCategory category = PostCategory.builder()
                 .id(request.getCategoryId())
                 .build();
 
         //Post 생성
-        Post post = Post.builder()
-                .user(currentUser)
-                .category(category)
-                .title(request.getTitle())
-                .description(request.getDescription())
-                .capacity(request.getCapacity())
-                .price(request.getPrice())
-                .unit(request.getUnit())
-                .deadline(request.getDeadline())
-                .deliveryMethod(DeliveryMethod.valueOf(request.getDeliveryMethod())) // enum 변환
-                .isAgree(request.getIsAgree())
-                .build();
+        Post post = PostConverter.toEntity(request, currentUser, category);
 
         Post savedPost = postRepository.save(post);
         return savedPost.getId();
