@@ -30,7 +30,7 @@ spring:
       client:
         registration:
           kakao:
-            client-id: [카카오 REST API 키]
+            client-id: ${KAKAO_REST_API_KEY}
             redirect-uri: http://localhost:8080/api/users/login/oauth/kakao/callback
             authorization-grant-type: authorization_code
             client-name: Kakao
