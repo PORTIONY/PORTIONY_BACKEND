@@ -3,6 +3,7 @@ package com.portiony.portiony.util;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.security.Key;
 import java.util.Date;
@@ -10,22 +11,20 @@ import java.util.Date;
 @Component
 public class JwtUtil {
 
-    // 실제 서비스에선 yml에서 불러오도록 리팩토링 가능
-    private static final String SECRET_KEY = "your-secret-key-for-jwt-signing-must-be-long-enough";
-    private static final long EXPIRATION_TIME = 1000 * 60 * 60 * 24; // 1일
-
     private final Key key;
+    private final long expirationTime;
 
-    public JwtUtil() {
-        this.key = Keys.hmacShaKeyFor(SECRET_KEY.getBytes());
+    public JwtUtil(@Value("${jwt.secret}") String secretKey,
+                   @Value("${jwt.expiration}") long expirationTime) {
+        this.key = Keys.hmacShaKeyFor(secretKey.getBytes());
+        this.expirationTime = expirationTime;
     }
 
-    // 토큰 생성
     public String generateToken(String email) {
         return Jwts.builder()
                 .setSubject(email)
                 .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
+                .setExpiration(new Date(System.currentTimeMillis() + expirationTime))
                 .signWith(key, SignatureAlgorithm.HS256)
                 .compact();
     }

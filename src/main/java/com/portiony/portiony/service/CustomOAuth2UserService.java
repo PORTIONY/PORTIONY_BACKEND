@@ -37,7 +37,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         // 기존 회원이면 JWT 토큰 생성
         String token = jwtUtil.generateToken(user.getEmail());
 
-        // JWT 토큰을 OAuth2User 속성에 추가해서 컨트롤러에서 꺼낼 수 있게 하자
+        // JWT 토큰을 OAuth2User 속성에 추가해서 컨트롤러에서 꺼낼 수 있게!
         Map<String, Object> attributes = new HashMap<>(oAuth2User.getAttributes());
         attributes.put("accessToken", token);
 
