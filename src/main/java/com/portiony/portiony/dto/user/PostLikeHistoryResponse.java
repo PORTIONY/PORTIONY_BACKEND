@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 @Data
 @AllArgsConstructor
 @Builder
-public class PurchaseHistoryResponse {
+public class PostLikeHistoryResponse {
     private Long postId;
     private String title;
     private int price;
