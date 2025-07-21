@@ -20,6 +20,7 @@ public class ChatResponseDTO {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class ChatMessageRsDTO{
+        private Long chatRoomId;
         private Long messageId;
         private Long senderId;
         private String content;
