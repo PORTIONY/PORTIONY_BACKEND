@@ -24,28 +24,28 @@ spring:
     include:
       - database
       - local
-#
-#  security:
-#    oauth2:
-#      client:
-#        registration:
-#          kakao:
-#            client-id: [카카오 REST API 키]
-#            redirect-uri: http://localhost:8080/api/users/login/oauth/kakao/callback
-#            authorization-grant-type: authorization_code
-#            client-name: Kakao
-#        provider:
-#          kakao:
-#            authorization-uri: https://kauth.kakao.com/oauth/authorize
-#            token-uri: https://kauth.kakao.com/oauth/token
-#            user-info-uri: https://kapi.kakao.com/v2/user/me
-#            user-name-attribute: id
+
+  security:
+    oauth2:
+      client:
+        registration:
+          kakao:
+            client-id: ${KAKAO_REST_API_KEY}
+            redirect-uri: http://localhost:8080/api/users/login/oauth/kakao/callback
+            authorization-grant-type: authorization_code
+            client-name: Kakao
+        provider:
+          kakao:
+            authorization-uri: https://kauth.kakao.com/oauth/authorize
+            token-uri: https://kauth.kakao.com/oauth/token
+            user-info-uri: https://kapi.kakao.com/v2/user/me
+            user-name-attribute: id
 
 #frontend:
 #  domain: ${FRONT_DOMAIN}
 #
-#jwt:
-#  secret: ${JWT_SECRET}
+jwt:
+  secret: ${JWT_SECRET_KEY}
 #
 #redis:
 #  domain: ${REDIS_DOMAIN}
