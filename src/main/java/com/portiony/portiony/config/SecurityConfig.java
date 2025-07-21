@@ -1,8 +1,9 @@
 package com.portiony.portiony.config;
 
-import com.portiony.portiony.security.CustomUserDetailsService;
-import com.portiony.portiony.security.JwtAuthenticationFilter;
-import com.portiony.portiony.service.CustomOAuth2UserService;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.portiony.portiony.repository.UserRepository;
+import com.portiony.portiony.security.*;
+import com.portiony.portiony.service.*;
 import com.portiony.portiony.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -11,11 +12,12 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.config.Customizer;
 
 
 @Configuration
@@ -24,8 +26,12 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 public class SecurityConfig {
 
     private final JwtUtil jwtUtil;
+    private final RefreshTokenService refreshTokenService;
     private final CustomUserDetailsService customUserDetailsService;
     private final CustomOAuth2UserService customOAuth2UserService;
+    private final UserRepository userRepository;
+    private final ObjectMapper objectMapper;
+
 
     @Bean
     public JwtAuthenticationFilter jwtAuthenticationFilter() {
@@ -35,6 +41,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
+                .cors(Customizer.withDefaults())
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
@@ -42,10 +49,7 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
                                 "/swagger-resources/**",
-                                "/webjars/**",
-                                "/api/users/signup/**",
-                                "/api/users/login",
-                                "/api/users/login/oauth/**"
+                                "/webjars/**"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
@@ -57,7 +61,7 @@ public class SecurityConfig {
                 .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class)
                 .oauth2Login(oauth2 -> oauth2
                         .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
-                        .defaultSuccessUrl("/api/users/login/oauth/kakao/success")
+                        .successHandler(oAuth2SuccessHandler()) // 카카오 로그인 성공 시 토큰 반환
                         .failureUrl("/loginFailure")
                 );
 
@@ -73,5 +77,15 @@ public class SecurityConfig {
     public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
         return authConfig.getAuthenticationManager();
     }
-}
 
+    @Bean
+    public OAuth2SuccessHandler oAuth2SuccessHandler() {
+        return new OAuth2SuccessHandler(
+                jwtUtil,
+                customUserDetailsService,
+                refreshTokenService,
+                userRepository,
+                objectMapper
+        );
+    }
+}

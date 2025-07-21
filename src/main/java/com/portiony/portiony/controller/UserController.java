@@ -19,6 +19,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
+import io.swagger.v3.oas.annotations.Hidden;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -34,7 +35,7 @@ public class UserController {
     private final JwtUtil jwtUtil;
 
     // 이메일로 userId 추출 메서드 (토큰에서 이메일 추출 후 DB 조회)
-    public Long extrctUserIdFromToken(String authHeader) {
+    public Long extractUserIdFromToken(String authHeader) {
         String token = authHeader.replace("Bearer ", "");
         String email = jwtUtil.extractEmail(token);
 
@@ -46,19 +47,20 @@ public class UserController {
 
     // 회원가입 (기존 REST)
     @PostMapping("/signup")
-    public ResponseEntity<String> signup(@RequestBody SignupRequestDto dto) {
+    public ResponseEntity<String> signup(@Valid @RequestBody SignupRequestDto dto) {
         userService.signup(dto);
         return ResponseEntity.ok("회원가입이 완료되었습니다.");
     }
 
     // 일반 로그인
     @PostMapping("/login")
-    public ResponseEntity<LoginResponseDto> login(@RequestBody LoginRequestDto requestDto) {
+    public ResponseEntity<LoginResponseDto> login(@Valid @RequestBody LoginRequestDto requestDto) {
         LoginResponseDto response = userService.login(requestDto);
         return ResponseEntity.ok(response);
     }
 
     // 카카오 로그인 성공 시 (OAuth2User 활용)
+    @Hidden
     @GetMapping("/login/oauth/kakao/success")
     public ResponseEntity<Map<String, Object>> kakaoLoginSuccess(@AuthenticationPrincipal OAuth2User oAuth2User) {
         String token = (String) oAuth2User.getAttribute("accessToken");
@@ -72,8 +74,9 @@ public class UserController {
     }
 
     // 카카오 신규회원 가입
+    @Hidden
     @PostMapping("/login/oauth/kakao/signup")
-    public ResponseEntity<String> kakaoSignup(@RequestBody KakaoSignupRequestDto dto) {
+    public ResponseEntity<String> kakaoSignup(@Valid @RequestBody KakaoSignupRequestDto dto) {
         userService.kakaoSignup(dto);
         return ResponseEntity.ok("카카오 회원가입이 완료되었습니다.");
     }
@@ -81,14 +84,14 @@ public class UserController {
     // 사용자 프로필 조회
     @GetMapping("/")
     public UserProfileResponse getUserProfile(@RequestHeader("Authorization") String authHeader) {
-        Long userId = extrctUserIdFromToken(authHeader);
+        Long userId = extractUserIdFromToken(authHeader);
         return userService.getUserProfile(userId);
     }
 
     // 내 프로필 수정 화면 조회
     @GetMapping("/me")
     public EditProfileViewResponse getMyProfileForEdit(@RequestHeader("Authorization") String authHeader) {
-        Long userId = extrctUserIdFromToken(authHeader);
+        Long userId = extractUserIdFromToken(authHeader);
         return userService.editProfileView(userId);
     }
 
@@ -96,7 +99,7 @@ public class UserController {
     @PatchMapping("/me")
     public ResponseEntity<Map<String, String>> editProfile(@RequestHeader("Authorization") String authHeader,
                                                            @RequestBody EditProfileRequest request) {
-        Long userId = extrctUserIdFromToken(authHeader);
+        Long userId = extractUserIdFromToken(authHeader);
         userService.editProfile(userId, request);
         return ResponseEntity.ok(Collections.singletonMap("message", "프로필이 수정되었습니다."));
     }
@@ -105,7 +108,7 @@ public class UserController {
     @DeleteMapping("/me")
     public ResponseEntity<Map<String, String>> deleteUser(@RequestHeader("Authorization") String authHeader,
                                                           @RequestBody DeleteUserRequest request) {
-        Long userId = extrctUserIdFromToken(authHeader);
+        Long userId = extractUserIdFromToken(authHeader);
         userService.deleteUser(userId, request);
         return ResponseEntity.ok(Collections.singletonMap("message", "탈퇴가 완료되었습니다."));
     }
@@ -120,7 +123,7 @@ public class UserController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "12") int size
     ) {
-        Long userId = extrctUserIdFromToken(authHeader);
+        Long userId = extractUserIdFromToken(authHeader);
         return userService.getMyPurchases(userId, dateSort, priceSort, status, page, size);
     }
 
@@ -135,7 +138,7 @@ public class UserController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "12") int size
     ) {
-        Long myId = extrctUserIdFromToken(authHeader);
+        Long myId = extractUserIdFromToken(authHeader);
         return userService.getMySales(myId, userId, dateSort, priceSort, status, page, size);
     }
 
@@ -149,7 +152,7 @@ public class UserController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
-        Long userId = extrctUserIdFromToken(authHeader);
+        Long userId = extractUserIdFromToken(authHeader);
         return userService.getReviewsByMe(userId, type, reviewSort, writtenStatus, page, size);
     }
 
@@ -164,7 +167,7 @@ public class UserController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "9") int size
     ) {
-        Long myId = extrctUserIdFromToken(authHeader);
+        Long myId = extractUserIdFromToken(authHeader);
         return userService.getReviewsByOther(myId, userId, type, sort, starSort, page, size);
     }
 
@@ -177,7 +180,7 @@ public class UserController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "12") int size
     ) {
-        Long userId = extrctUserIdFromToken(authHeader);
+        Long userId = extractUserIdFromToken(authHeader);
         return userService.getWishlist(userId, sort, status, page, size);
     }
 
@@ -188,7 +191,7 @@ public class UserController {
             @PathVariable Long reviewId,
             @RequestBody @Valid ReviewRegisterRequest request
     ) {
-        Long userId = extrctUserIdFromToken(authHeader);
+        Long userId = extractUserIdFromToken(authHeader);
         userService.registerReview(userId, reviewId, request);
         return ResponseEntity.ok(Collections.singletonMap("message", "후기가 등록되었습니다."));
     }
@@ -199,7 +202,7 @@ public class UserController {
             @RequestHeader("Authorization") String authHeader,
             @PathVariable Long reviewId
     ) {
-        Long userId = extrctUserIdFromToken(authHeader);
+        Long userId = extractUserIdFromToken(authHeader);
         userService.deleteReview(userId, reviewId);
         return ResponseEntity.ok(Collections.singletonMap("message", "후기가 삭제되었습니다."));
     }

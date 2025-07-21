@@ -1,13 +1,13 @@
 package com.portiony.portiony.dto;
 
-import lombok.Getter;
-import lombok.Setter;
-
+import lombok.*;
 import java.util.List;
 
 @Getter
 @Setter
-public class KakaoSignupRequestDto {
+@NoArgsConstructor
+@AllArgsConstructor
+public class KakaoSignupRequestDto implements SignupBaseDto {
     private String email;
     private String nickname;
     private String profileImage;
@@ -18,4 +18,9 @@ public class KakaoSignupRequestDto {
     private Integer mainCategory;
     private Integer purchaseReason;
     private Integer situation;
+
+    @Override
+    public String getPassword() {
+        return null;
+    }
 }

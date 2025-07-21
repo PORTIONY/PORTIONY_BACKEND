@@ -4,9 +4,6 @@ import lombok.*;
 
 @Getter
 @Setter
-@NoArgsConstructor
-@AllArgsConstructor
-public class LoginResponseDto {
-    private String accessToken;
+public class RefreshRequestDto {
     private String refreshToken;
 }

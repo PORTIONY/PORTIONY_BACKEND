@@ -34,6 +34,7 @@ spring:
             redirect-uri: http://localhost:8080/api/users/login/oauth/kakao/callback
             authorization-grant-type: authorization_code
             client-name: Kakao
+            scope: profile_nickname, account_email
         provider:
           kakao:
             authorization-uri: https://kauth.kakao.com/oauth/authorize
