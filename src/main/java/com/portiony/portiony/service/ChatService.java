@@ -13,6 +13,8 @@ import com.portiony.portiony.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 public class ChatService {
@@ -21,14 +23,26 @@ public class ChatService {
     private final PostRepository postRepository;
     private final UserRepository userRepository;
 
+    //공통 에러처리 로직 / 객체 불러옴
+    private Post getPostOrThrow(Long postId) {
+        return postRepository.findById(postId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 게시글입니다."));
+    }
+
+    private User getUserOrThrow(Long userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 유저입니다."));
+    }
+
+    private ChatRoom getChatRoomOrThrow(Long chatRoomId) {
+        return chatRoomRepository.findById(chatRoomId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 채팅방입니다."));
+    }
+
     //채팅방 생성
     public ChatResponseDTO.CreateRoomRsDTO createChatRoom(ChatRequestDTO.CreateRoomRqDTO request){
-        Post post = postRepository.findById(request.getPostId())
-                .orElseThrow(() -> new IllegalArgumentException("게시글 없음"));
-
-        User buyer = userRepository.findById(request.getBuyerId())
-                .orElseThrow(() -> new IllegalArgumentException("구매자 없음"));
-
+        Post post = getPostOrThrow(request.getPostId());
+        User buyer = getUserOrThrow(request.getBuyerId());
         User seller = post.getUser();
 
         //본인 게시글 자신이 구매 x
@@ -53,12 +67,10 @@ public class ChatService {
                 .build();
     }
 
-    //메시지 전송
+    //메시지 전송 +)이미지 처리 로직 추가 필요
     public ChatResponseDTO.ChatMessageRsDTO saveMessage(ChatRequestDTO.ChatMessageDTO dto) {
-        ChatRoom room = chatRoomRepository.findById(dto.getChatRoomId())
-                .orElseThrow(() -> new IllegalArgumentException("채팅방 없음"));
-        User sender = userRepository.findById(dto.getSenderId())
-                .orElseThrow(() -> new IllegalArgumentException("보낸 유저 없음"));
+        ChatRoom room = getChatRoomOrThrow(dto.getChatRoomId());
+        User sender = getUserOrThrow(dto.getSenderId());
 
         User seller = room.getSeller(); //판매자
         User buyer = room.getBuyer(); //구매자
@@ -78,12 +90,32 @@ public class ChatService {
         ChatMessage saved = chatMessageRepository.save(message);
 
         return ChatResponseDTO.ChatMessageRsDTO.builder()
+                .chatRoomId(room.getId())
                 .messageId(saved.getId())
                 .senderId(sender.getId())
                 .content(saved.getContent())
                 .isRead(saved.isRead())
                 .createdAt(saved.getCreatedAt())
                 .build();
+    }
+
+
+    //메시지 읽음 처리
+    public void markMessagesAsRead(Long chatRoomId, Long userId) {
+        if (!chatRoomRepository.existsById(chatRoomId)) {
+            throw new IllegalArgumentException("존재하지 않는 채팅방입니다.");
+        }
+
+        //내가 보낸 메시지가 아닌 것들 중에서 read > false인 메시지들
+        List<ChatMessage> unreadMessages =
+                chatMessageRepository.findByChatRoomIdAndSenderIdNotAndIsReadFalse(chatRoomId, userId);
+
+        //read > true 처리
+        List<ChatMessage> updatedMessages = unreadMessages.stream()
+                .peek(msg -> msg.setRead(true))
+                .toList();
+
+        chatMessageRepository.saveAll(updatedMessages);
     }
 
 }
