@@ -9,13 +9,13 @@ import java.time.LocalDateTime;
 @Data
 @AllArgsConstructor
 public class PurchaseProjectionDto {
-    Long postId;
-    String title;
-    int price;
-    String region;
-    LocalDateTime deadline;
-    LocalDateTime createdAt;
-    PostStatus status;
-    LocalDateTime purchasedAt;
-    Long thumbnailPostId;
+    private Long postId;
+    private String title;
+    private int price;
+    private String region;
+    private LocalDateTime deadline;
+    private LocalDateTime createdAt;
+    private PostStatus status;
+    private LocalDateTime purchasedAt;
+    private Long thumbnailPostId;
 }
