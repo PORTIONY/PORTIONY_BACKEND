@@ -3,12 +3,17 @@ package com.portiony.portiony.controller;
 import com.portiony.portiony.dto.Post.CreatePostRequest;
 import com.portiony.portiony.dto.Post.CreatePostResponse;
 import com.portiony.portiony.dto.Post.PostWithCommentsResponse;
+import com.portiony.portiony.dto.comment.CommentListResponse;
 import com.portiony.portiony.dto.comment.CreateCommentRequest;
 import com.portiony.portiony.dto.comment.CreateCommentResponse;
 import com.portiony.portiony.service.PostService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import org.springframework.data.domain.Pageable;
 
 @RestController
 @RequiredArgsConstructor
@@ -16,7 +21,6 @@ import org.springframework.web.bind.annotation.*;
 public class PostController {
     private final PostService postService;
 
-    //TODO : 댓글 구현 후 서비스에서 ResponseDTO 넘기도록 수정
     @PostMapping("/")
     public ResponseEntity<CreatePostResponse> createPost(@RequestBody CreatePostRequest request) {
         Long postId = postService.createPost(request);
@@ -26,11 +30,17 @@ public class PostController {
     /**
      * 게시글 상세 정보 및 첫 페이지 댓글
      */
-    //TODO : page 댓글 페이지네이션
     @GetMapping("/{postId}")
     public ResponseEntity<PostWithCommentsResponse> getPost(@PathVariable Long postId) {
         PostWithCommentsResponse response = postService.getPostWithComments(postId);
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{postId}/comments")
+    public ResponseEntity<CommentListResponse> getComments(
+            @PathVariable Long postId,
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        return ResponseEntity.ok(postService.getCommentsByPostId(postId, pageable));
     }
 
     @PostMapping("/{postId}/comments")

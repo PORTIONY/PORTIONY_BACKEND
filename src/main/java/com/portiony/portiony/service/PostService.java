@@ -5,6 +5,7 @@ import com.portiony.portiony.converter.PostConverter;
 import com.portiony.portiony.dto.Post.CreatePostRequest;
 import com.portiony.portiony.dto.Post.PostDetailResponse;
 import com.portiony.portiony.dto.Post.PostWithCommentsResponse;
+import com.portiony.portiony.dto.comment.CommentDTO;
 import com.portiony.portiony.dto.comment.CommentListResponse;
 import com.portiony.portiony.dto.comment.CreateCommentRequest;
 import com.portiony.portiony.dto.comment.CreateCommentResponse;
@@ -17,8 +18,12 @@ import com.portiony.portiony.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import com.portiony.portiony.repository.PostRepository;
+
+import org.springframework.data.domain.Pageable;
 import java.util.List;
 
 @RequiredArgsConstructor
@@ -51,11 +56,9 @@ public class PostService {
         Post post = postRepository.findById(postId)
                 .orElseThrow(()->new IllegalArgumentException("게시글이 존재하지 않습니다."));
         PostDetailResponse postDetailResponse = PostConverter.toPostDetailResponse(post);
-
-        //TODO : 추후 댓글 내용 리스트 불러오는 코드 추가
-        List<CommentListResponse> CommentListResponse = null;
-
-        return new PostWithCommentsResponse(postDetailResponse,CommentListResponse);
+        Pageable pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt"));
+        CommentListResponse commentListResponse = getCommentsByPostId(postId, pageable);
+        return new PostWithCommentsResponse(postDetailResponse,commentListResponse);
     }
 
     public CreateCommentResponse createComment(CreateCommentRequest request, Long postId) {
@@ -70,5 +73,11 @@ public class PostService {
         PostComment saved = commentRepository.save(postComment);
 
         return CommentConverter.toCreateCommentsResponse(saved);
+    }
+
+    public CommentListResponse getCommentsByPostId(Long postId, Pageable pageable) {
+        Long totalCount = commentRepository.countByPostIdAndIsDeletedFalse(postId);
+        List<CommentDTO> items = commentRepository.findAllByPostId(postId, pageable);
+        return new CommentListResponse(totalCount, items);
     }
 }

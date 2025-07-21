@@ -38,7 +38,6 @@ public class PostConverter {
      * @return PostDetailResponse DTO 객체
      */
     //TODO: 이미지 URL 리스트 추가 (S3연동 후)
-    //TODO: 댓글 개수 및 목록 추가
     //TODO: 찜 개수 추가
     public static PostDetailResponse toPostDetailResponse(Post post) {
         SellerDTO seller = SellerDTO.builder()
