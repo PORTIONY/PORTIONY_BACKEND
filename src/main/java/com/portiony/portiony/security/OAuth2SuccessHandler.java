@@ -36,6 +36,18 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
                                         HttpServletResponse response,
                                         Authentication authentication) throws IOException, ServletException {
 
+        // Swagger 요청 감지: Referer 또는 Accept 헤더로 판단
+        String referer = request.getHeader("Referer");
+        String accept = request.getHeader("Accept");
+
+        if ((referer != null && referer.contains("/swagger")) ||
+                (accept != null && accept.contains("text/html"))) {
+            log.info("✅ Swagger 또는 HTML 요청은 OAuth2SuccessHandler에서 무시합니다.");
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            return;
+        }
+
+        // OAuth2 유저 정보 추출
         OAuth2User oAuth2User = (OAuth2User) authentication.getPrincipal();
         String email = (String) oAuth2User.getAttributes().get("email");
 
@@ -59,4 +71,6 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
         response.setContentType("application/json;charset=UTF-8");
         response.getWriter().write(objectMapper.writeValueAsString(tokenResponse));
     }
+
+
 }

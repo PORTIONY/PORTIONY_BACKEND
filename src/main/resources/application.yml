@@ -9,14 +9,15 @@ server:
 spring:
   application:
     name: portiony
+
   jpa:
-    show-sql: true
+    show-sql: false
     generate-ddl: true
     properties:
       hibernate:
-        show_sql: true
-        format_sql: true
-        use_sql_comments: true
+        show_sql: false
+        format_sql: false
+        use_sql_comments: false
         hbm2ddl:
           auto: update
     database: mysql
@@ -42,11 +43,20 @@ spring:
             user-info-uri: https://kapi.kakao.com/v2/user/me
             user-name-attribute: id
 
-#frontend:
-#  domain: ${FRONT_DOMAIN}
-#
+kakao:
+  rest-api-key: ${KAKAO_REST_API_KEY}
+
 jwt:
   secret: ${JWT_SECRET_KEY}
-#
+  accessExpiration: 3600000
+  refreshExpiration: 2592000000
+
+logging:
+  level:
+    org.hibernate.SQL: OFF
+    org.hibernate.type.descriptor.sql.BasicBinder: OFF
+
+#frontend:
+#  domain: ${FRONT_DOMAIN}
 #redis:
 #  domain: ${REDIS_DOMAIN}
