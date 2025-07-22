@@ -398,12 +398,12 @@ public class UserService {
     }
 
     // 받은 후기 조회
-    public PageResponse<ReviewHistoryResponse> getReviewsByOther(Long myId, Long userId, String type, String reviewSort, String starSort, int page, int size) {
+    public PageResponse<ReviewHistoryResponse> getReviewsByOther(Long myId, Long userId, boolean writtenStatus, String type, String reviewSort, String starSort, int page, int size) {
 
         Sort sortOption = getReviewSort(starSort, reviewSort);
         Pageable pageable = PageRequest.of(page - 1, size, sortOption);
 
-        Page<Review> reviews = reviewRepository.findReviewsByOther(userId, type, pageable);
+        Page<Review> reviews = reviewRepository.findReviewsByOther(userId, writtenStatus, type, pageable);
 
         List<ReviewHistoryResponse> content = reviews.getContent().stream()
                 .map(review -> {

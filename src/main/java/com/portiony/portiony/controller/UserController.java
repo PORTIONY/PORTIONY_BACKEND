@@ -158,6 +158,7 @@ public class UserController {
     public PageResponse<ReviewHistoryResponse> getReviewsByOther(
             @RequestHeader("Authorization") String authHeader,
             @PathVariable Long userId,
+            @RequestParam(required = false) boolean writtenStatus,
             @RequestParam(required = false) String type,
             @RequestParam(required = false) String sort,
             @RequestParam(required = false) String starSort,
@@ -165,7 +166,7 @@ public class UserController {
             @RequestParam(defaultValue = "9") int size
     ) {
         Long myId = extrctUserIdFromToken(authHeader);
-        return userService.getReviewsByOther(myId, userId, type, sort, starSort, page, size);
+        return userService.getReviewsByOther(myId, userId, writtenStatus, type, sort, starSort, page, size);
     }
 
     // 찜 목록 조회

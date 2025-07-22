@@ -34,5 +34,5 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
             (:writtenStatus = false AND r.createdAt IS NULL)
         )
     """)
-    Page<Review> findReviewsByOther(@Param("userId") Long userId, @Param("type") String type, Pageable pageable);
+    Page<Review> findReviewsByOther(@Param("userId") Long userId, @Param("writtenStatus") Boolean writtenStatus, @Param("type") String type, Pageable pageable);
 }
