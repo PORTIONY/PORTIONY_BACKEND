@@ -33,3 +33,6 @@ spring:
 #
 #redis:
 #  domain: ${REDIS_DOMAIN}
+
+gemini:
+  api-key: AIzaSyAAY_CgUdouNsb9BgoIVns_bvcBoi_sc30
