@@ -19,6 +19,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
+import lombok.extern.slf4j.Slf4j;
 import io.swagger.v3.oas.annotations.Hidden;
 
 import java.util.Collections;
@@ -28,6 +29,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
+@Slf4j
 public class UserController {
 
     private final UserService userService;
@@ -161,14 +163,15 @@ public class UserController {
     public PageResponse<ReviewHistoryResponse> getReviewsByOther(
             @RequestHeader("Authorization") String authHeader,
             @PathVariable Long userId,
+            @RequestParam(required = false) boolean writtenStatus,
             @RequestParam(required = false) String type,
             @RequestParam(required = false) String sort,
             @RequestParam(required = false) String starSort,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "9") int size
     ) {
-        Long myId = extractUserIdFromToken(authHeader);
-        return userService.getReviewsByOther(myId, userId, type, sort, starSort, page, size);
+        Long myId = extrctUserIdFromToken(authHeader);
+        return userService.getReviewsByOther(myId, userId, writtenStatus, type, sort, starSort, page, size);
     }
 
     // 찜 목록 조회
@@ -191,7 +194,12 @@ public class UserController {
             @PathVariable Long reviewId,
             @RequestBody @Valid ReviewRegisterRequest request
     ) {
-        Long userId = extractUserIdFromToken(authHeader);
+      
+        //후기등록 api 로그
+        log.info("리뷰 등록 요청: reviewId={}, star={}, choice={}, content={}",
+                reviewId, request.getStar(), request.getChoice(), request.getContent());
+
+        Long userId = extrctUserIdFromToken(authHeader);
         userService.registerReview(userId, reviewId, request);
         return ResponseEntity.ok(Collections.singletonMap("message", "후기가 등록되었습니다."));
     }
