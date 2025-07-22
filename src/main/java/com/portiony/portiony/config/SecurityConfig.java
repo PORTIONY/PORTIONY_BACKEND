@@ -49,9 +49,6 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
                                 "/swagger-resources/**",
-<<<<<<< HEAD
-                                "/webjars/**"
-=======
                                 "/webjars/**",
                                 "/api/users/signup/**",
                                 "/api/users/login",
@@ -59,8 +56,6 @@ public class SecurityConfig {
                                 "/ws-chat/**", // WebSocket endpoint
                                 "/ws-chat-sockjs/**", // SockJS fallback
                                 "/**" //개발용 허용 > 토큰 구현 후 삭제
-
->>>>>>> main
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
