@@ -45,8 +45,8 @@ spring:
 #frontend:
 #  domain: ${FRONT_DOMAIN}
 #
-#jwt:
-#  secret: ${JWT_SECRET}
+jwt:
+  secret: ${JWT_SECRET_KEY}
 #
 #redis:
 #  domain: ${REDIS_DOMAIN}

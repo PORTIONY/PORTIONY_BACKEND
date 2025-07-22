@@ -49,7 +49,18 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
                                 "/swagger-resources/**",
+<<<<<<< HEAD
                                 "/webjars/**"
+=======
+                                "/webjars/**",
+                                "/api/users/signup/**",
+                                "/api/users/login",
+                                "/api/users/login/oauth/**",
+                                "/ws-chat/**", // WebSocket endpoint
+                                "/ws-chat-sockjs/**", // SockJS fallback
+                                "/**" //개발용 허용 > 토큰 구현 후 삭제
+
+>>>>>>> main
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
@@ -77,6 +88,7 @@ public class SecurityConfig {
     public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
         return authConfig.getAuthenticationManager();
     }
+
 
     @Bean
     public OAuth2SuccessHandler oAuth2SuccessHandler() {

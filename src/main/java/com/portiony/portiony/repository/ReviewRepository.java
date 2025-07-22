@@ -15,11 +15,11 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
         SELECT r FROM Review r JOIN r.chatRoom cr JOIN cr.post p
         WHERE r.writer.id = :userId
         AND (
-            (:type = 'writer' AND r.writer.id = :userId) OR 
-            (:type = 'target' AND r.target.id = :userId) 
+            (:type = 'writer' AND r.writer.id = :userId) OR
+            (:type = 'target' AND r.target.id = :userId)
         )
         AND (
-            (:writtenStatus = true AND r.createdAt IS NOT NULL) OR 
+            (:writtenStatus = true AND r.createdAt IS NOT NULL) OR
             (:writtenStatus = false AND r.createdAt IS NULL)
         )
     """)
@@ -30,7 +30,7 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
         WHERE r.writer.id = :userId
         AND cr.status = 'COMPLETED'
         AND (
-            (:writtenStatus = true AND r.createdAt IS NOT NULL) OR 
+            (:writtenStatus = true AND r.createdAt IS NOT NULL) OR
             (:writtenStatus = false AND r.createdAt IS NULL)
         )
     """)
