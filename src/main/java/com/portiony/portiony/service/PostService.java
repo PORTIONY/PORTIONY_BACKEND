@@ -14,6 +14,7 @@ import com.portiony.portiony.entity.User;
 import com.portiony.portiony.entity.enums.DeliveryMethod;
 import com.portiony.portiony.repository.CommentRepository;
 import com.portiony.portiony.repository.UserRepository;
+import com.portiony.portiony.security.CustomUserDetails;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -36,12 +37,9 @@ public class PostService {
     private final UserRepository userRepository;
 
     @Transactional
-    public Long createPost(CreatePostRequest request) {
-        //TODO : 현재는 더미 데이터를 사용 중
-        //후에 로그인한 사용자와 지정한 카테고리를 Repository로 조회해서 사용해야 함
-        User currentUser = User.builder()
-                .id(15L)
-                .build();
+    public Long createPost(CustomUserDetails userDetails, CreatePostRequest request) {
+        User currentUser = userDetails.getUser();
+
         PostCategory category = PostCategory.builder()
                 .id(request.getCategoryId())
                 .build();
@@ -63,15 +61,15 @@ public class PostService {
         return new PostWithCommentsResponse(postDetailResponse,commentListResponse);
     }
 
-    public CreateCommentResponse createComment(CreateCommentRequest request, Long postId) {
+    public CreateCommentResponse createComment(CustomUserDetails userDetails,
+                                               Long postId,
+                                               CreateCommentRequest request) {
         Post post = postRepository.findPostById(postId)
                 .orElseThrow(() -> new EntityNotFoundException("게시글이 존재하지 않습니다."));
 
-        //TODO : 더미 데이터 수정
-        User user = userRepository.findById(15L)
-                .orElseThrow(()-> new EntityNotFoundException("유저가 존재하지 않습니다."));
+        User currentUser = userDetails.getUser();
 
-        PostComment postComment = CommentConverter.toPostCommentEntity(post, user, request);
+        PostComment postComment = CommentConverter.toPostCommentEntity(post, currentUser, request);
         PostComment saved = commentRepository.save(postComment);
 
         return CommentConverter.toCreateCommentsResponse(saved);

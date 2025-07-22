@@ -4,11 +4,14 @@ import com.portiony.portiony.dto.Post.*;
 import com.portiony.portiony.dto.comment.CommentListResponse;
 import com.portiony.portiony.dto.comment.CreateCommentRequest;
 import com.portiony.portiony.dto.comment.CreateCommentResponse;
+import com.portiony.portiony.security.CustomUserDetails;
 import com.portiony.portiony.service.PostService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import org.springframework.data.domain.Pageable;
@@ -20,8 +23,9 @@ public class PostController {
     private final PostService postService;
 
     @PostMapping("/")
-    public ResponseEntity<CreatePostResponse> createPost(@RequestBody CreatePostRequest request) {
-        Long postId = postService.createPost(request);
+    public ResponseEntity<CreatePostResponse> createPost(@AuthenticationPrincipal CustomUserDetails userDetails,
+                                                         @RequestBody CreatePostRequest request) {
+        Long postId = postService.createPost(userDetails, request);
         return ResponseEntity.ok(new CreatePostResponse(postId));
     }
 
@@ -42,14 +46,18 @@ public class PostController {
     }
 
     @PostMapping("/{postId}/comments")
-    public ResponseEntity<CreateCommentResponse> createComments(@PathVariable Long postId, @RequestBody CreateCommentRequest request) {
-        CreateCommentResponse response = postService.createComment(request, postId);
+    public ResponseEntity<CreateCommentResponse> createComments(@AuthenticationPrincipal CustomUserDetails userDetails,
+                                                                @PathVariable Long postId,
+                                                                @RequestBody CreateCommentRequest request) {
+        CreateCommentResponse response = postService.createComment(userDetails, postId, request);
         return ResponseEntity.ok(response);
     }
 
     @PatchMapping("/{postId}")
-    public ResponseEntity<UpdatePostResponse> updatePost(@PathVariable Long postId, @RequestBody UpdatePostRequest request){
-        UpdatePostResponse response = postService.updatePost(postId, request, 15L);
+    public ResponseEntity<UpdatePostResponse> updatePost(@AuthenticationPrincipal CustomUserDetails userDetails,
+                                                         @PathVariable Long postId,
+                                                         @RequestBody UpdatePostRequest request){
+        UpdatePostResponse response = postService.updatePost(postId, request, userDetails.getUser().getId());
         return ResponseEntity.ok(response);
     }
 }
