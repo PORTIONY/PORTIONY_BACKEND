@@ -45,7 +45,11 @@ public class SecurityConfig {
                                 "/webjars/**",
                                 "/api/users/signup/**",
                                 "/api/users/login",
-                                "/api/users/login/oauth/**"
+                                "/api/users/login/oauth/**",
+                                "/ws-chat/**", // WebSocket endpoint
+                                "/ws-chat-sockjs/**", // SockJS fallback
+                                "/**" //개발용 허용 > 토큰 구현 후 삭제
+
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
@@ -74,4 +78,3 @@ public class SecurityConfig {
         return authConfig.getAuthenticationManager();
     }
 }
-

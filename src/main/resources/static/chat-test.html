@@ -69,7 +69,10 @@
         stompClient.send('/pub/chat/message', {}, JSON.stringify({
             chatRoomId: 2,
             senderId: senderId,
-            content: `(${senderId})의 실시간 메시지!`
+            content: `(${senderId})의 실시간 메시지!`,
+            imageUrls: [
+                "https://fake-url.com/chat-images/test-image.png"
+            ]
         }));
     }
 

@@ -18,7 +18,7 @@ public class ChatMessage extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(columnDefinition = "TEXT", nullable = false)
+    @Column(columnDefinition = "TEXT", nullable = true)
     private String content;
 
     @Builder.Default
@@ -33,6 +33,13 @@ public class ChatMessage extends BaseEntity {
     @JoinColumn(name = "sender_id", nullable = false)
     private User sender;
 
-//    @OneToMany(mappedBy = "chatMessage", cascade = CascadeType.ALL)
-//    private List<ChatImage> chatImageList = new ArrayList<>();
+    @Builder.Default
+    @OneToMany(mappedBy = "chatMessage", cascade = CascadeType.ALL)
+    private List<ChatImage> chatImageList = new ArrayList<>();
+
+    //연관 관계 편의 메서드
+    public void addChatImage(ChatImage image) {
+        chatImageList.add(image);
+        image.setChatMessage(this);
+    }
 }
