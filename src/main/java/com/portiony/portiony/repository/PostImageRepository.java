@@ -10,7 +10,7 @@ import java.util.Optional;
 
 @Repository
 public interface PostImageRepository extends JpaRepository<PostImage, Long> {
-
+    PostImage findFirstImageUrlByPostId(Long postId);
     @Query("SELECT pi.imageUrl FROM PostImage pi WHERE pi.post.id = :postId ORDER BY pi.orderNum ASC LIMIT 1")
     Optional<String> findThumbnailUrlByPostId(@Param("postId") Long postId);
 }

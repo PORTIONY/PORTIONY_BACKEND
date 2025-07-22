@@ -6,10 +6,7 @@ import com.portiony.portiony.dto.ChatRequestDTO;
 import com.portiony.portiony.dto.ChatResponseDTO;
 import com.portiony.portiony.entity.*;
 import com.portiony.portiony.entity.enums.ChatStatus;
-import com.portiony.portiony.repository.ChatMessageRepository;
-import com.portiony.portiony.repository.ChatRoomRepository;
-import com.portiony.portiony.repository.PostRepository;
-import com.portiony.portiony.repository.UserRepository;
+import com.portiony.portiony.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -26,6 +23,7 @@ public class ChatService {
     private final ChatMessageRepository chatMessageRepository;
     private final PostRepository postRepository;
     private final UserRepository userRepository;
+    private final PostImageRepository postImageRepository;
 
     //공통 에러처리 로직 / 객체 불러옴
     private Post getPostOrThrow(Long postId) {
@@ -217,6 +215,50 @@ public class ChatService {
         List<ChatMessage> messageList = chatMessageRepository.findByChatRoomId(chatRoomId);
 
         return ChatConverter.toDtoList(messageList, room.getId());
+    }
+
+    //채팅방 목록 조회
+    public ChatResponseDTO.ChatRoomListResponseDTO getChatRoomList(Long userId, String type) {
+        List<ChatRoom> chatRooms;
+
+        //사용자 속한 채팅방(전체, 구매, 판매)
+        switch (type.toLowerCase()) {
+            case "buy" -> chatRooms = chatRoomRepository.findByBuyerId(userId);
+            case "sell" -> chatRooms = chatRoomRepository.findBySellerId(userId);
+            default -> chatRooms = chatRoomRepository.findBySellerIdOrBuyerId(userId, userId);
+        }
+
+        List<ChatResponseDTO.ChatRoomPreviewDTO> dtoList = chatRooms.stream()
+                .map(room -> {
+                    //채팅방 별로 제일 최근 메시지 찾아
+                    ChatMessage lastMessage = chatMessageRepository
+                            .findTopByChatRoomIdOrderByCreatedAtDesc(room.getId());
+
+                    //상대방
+                    User partner = room.getSeller().getId().equals(userId)
+                            ? room.getBuyer()
+                            : room.getSeller();
+
+                    //post 이미지 조회 > 없으면 null
+                    PostImage postImageUrl = postImageRepository
+                            .findFirstImageUrlByPostId(room.getPost().getId());
+                    String imageUrl = postImageUrl != null ? postImageUrl.getImageUrl() : null;
+                    return ChatConverter.toChatRoomPreviewDTO(room, lastMessage, partner, imageUrl);
+                })
+                .sorted((a, b) -> {
+                    if (a.getLastMessageTime() == null && b.getLastMessageTime() == null) {
+                        // 둘 다 null이면 chatRoomId로 오름차순 정렬
+                        return a.getChatRoomId().compareTo(b.getChatRoomId());
+                    }
+                    if (a.getLastMessageTime() == null) return 1;  // a가 아래로
+                    if (b.getLastMessageTime() == null) return -1; // b가 아래로
+                    return b.getLastMessageTime().compareTo(a.getLastMessageTime()); // 최신순 정렬
+                })
+                .collect(Collectors.toList());
+
+        return new ChatResponseDTO.ChatRoomListResponseDTO(dtoList);
+
+
     }
 
 
