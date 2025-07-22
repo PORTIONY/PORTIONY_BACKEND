@@ -1,7 +1,6 @@
 package com.portiony.portiony.dto;
 
 import lombok.*;
-
 import java.util.List;
 
 @Getter
@@ -9,21 +8,16 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class SignupRequestDto {
+public class SignupRequestDto implements SignupBaseDto {
     private String email;
     private String password;
     private String nickname;
     private String profileImage;
-
     private List<Long> agreementIds;
-
     private Long regionId;
     private Long subregionId;
     private Long dongId;
-
-    // 사용자 선호정보 필드 추가
     private Integer mainCategory;
     private Integer purchaseReason;
     private Integer situation;
-
 }

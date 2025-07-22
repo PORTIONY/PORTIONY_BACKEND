@@ -1,12 +1,11 @@
 package com.portiony.portiony.dto;
 
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
 
-@Getter
-@Setter
-@NoArgsConstructor
+@Data
 @AllArgsConstructor
-public class LoginResponseDto {
+public class KakaoSignupResponseDto {
     private String accessToken;
     private String refreshToken;
 }
