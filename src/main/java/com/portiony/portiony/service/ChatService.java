@@ -1,19 +1,23 @@
 package com.portiony.portiony.service;
 
+//import com.portiony.portiony.converter.ChatConverter;
+import com.portiony.portiony.converter.ChatConverter;
 import com.portiony.portiony.dto.ChatRequestDTO;
 import com.portiony.portiony.dto.ChatResponseDTO;
-import com.portiony.portiony.entity.ChatMessage;
-import com.portiony.portiony.entity.ChatRoom;
-import com.portiony.portiony.entity.Post;
-import com.portiony.portiony.entity.User;
+import com.portiony.portiony.entity.*;
+import com.portiony.portiony.entity.enums.ChatStatus;
 import com.portiony.portiony.repository.ChatMessageRepository;
 import com.portiony.portiony.repository.ChatRoomRepository;
 import com.portiony.portiony.repository.PostRepository;
 import com.portiony.portiony.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -79,7 +83,13 @@ public class ChatService {
         if (!sender.getId().equals(seller.getId()) && !sender.getId().equals(buyer.getId())) {
             throw new IllegalArgumentException("해당 채팅방의 참여자만 메시지를 보낼 수 있습니다.");
         }
+        // 이미지, content 둘 다 없으면 에러처리
+        if ((dto.getContent() == null || dto.getContent().isBlank()) &&
+                (dto.getImageUrls() == null || dto.getImageUrls().isEmpty())) {
+            throw new IllegalArgumentException("content나 이미지는 하나 이상 포함되어야 합니다.");
+        }
 
+        //메시지 저장
         ChatMessage message = ChatMessage.builder()
                 .chatRoom(room)
                 .sender(sender)
@@ -87,16 +97,49 @@ public class ChatService {
                 .isRead(false)
                 .build();
 
+        //이미지가 있으면 처리
+        if (dto.getImageUrls() != null && !dto.getImageUrls().isEmpty()) {
+            for (String imageUrl : dto.getImageUrls()) {
+                ChatImage image = ChatImage.builder()
+                        .imageUrl(imageUrl)
+                        .build();
+                message.addChatImage(image); //연관관계 편의 메서드 사용 / 양쪽 엔티티 매핑
+            }
+        }
+
         ChatMessage saved = chatMessageRepository.save(message);
+
+        //image url 목록 추출
+        List<String> imageUrls = saved.getChatImageList().stream()
+                .map(ChatImage::getImageUrl)
+                .collect(Collectors.toList());
 
         return ChatResponseDTO.ChatMessageRsDTO.builder()
                 .chatRoomId(room.getId())
                 .messageId(saved.getId())
                 .senderId(sender.getId())
                 .content(saved.getContent())
+                .imageUrls(imageUrls)
                 .isRead(saved.isRead())
                 .createdAt(saved.getCreatedAt())
                 .build();
+    }
+
+    //메시지 처리 - 외부 스토리지 이미지 업로드 + 추후 로직 추가 필요함
+    public List<String> uploadImages(Long chatRoomId, Long userId, List<MultipartFile> images) {
+        ChatRoom room = getChatRoomOrThrow(chatRoomId);
+
+        if (!room.getSeller().getId().equals(userId) && !room.getBuyer().getId().equals(userId)) {
+            throw new IllegalArgumentException("채팅방 참여자만 업로드 가능합니다.");
+        }
+        //s3에 올려야함 추후 로직 추가 필요
+//        return images.stream()
+//                .map(s3Service::upload)
+//                .collect(Collectors.toList());
+        //임시 URL 생성해서 반환
+        return images.stream()
+                .map(image -> "https://fake-url.com/chat-images/" + UUID.randomUUID() + "_" + image.getOriginalFilename())
+                .collect(Collectors.toList());
     }
 
 
@@ -117,5 +160,64 @@ public class ChatService {
 
         chatMessageRepository.saveAll(updatedMessages);
     }
+
+    //거래 완료 처리
+    public ChatResponseDTO.ChatCompleteRsDTO chatToComplete(Long chatRoomId, Long userId) {
+        ChatRoom room = getChatRoomOrThrow(chatRoomId);
+
+        boolean isSeller = room.getSeller().getId().equals(userId);
+        boolean isBuyer = room.getBuyer().getId().equals(userId);
+
+        if (!isSeller && !isBuyer) {
+            throw new IllegalArgumentException("해당 채팅방의 참여자가 아닙니다.");
+        }
+
+        // 중복 완료 방지
+        if (isSeller && room.getSellerStatus() == ChatStatus.COMPLETED) {
+            throw new IllegalArgumentException("판매자 > 이미 완료.");
+        }
+        if (isBuyer && room.getBuyerStatus() == ChatStatus.COMPLETED) {
+            throw new IllegalArgumentException("구매자 > 이미 완료.");
+        }
+
+        // 상태 업데이트
+        if (isSeller) {
+            room.setSellerStatus(ChatStatus.COMPLETED);
+        } else {
+            room.setBuyerStatus(ChatStatus.COMPLETED);
+        }
+
+        // 모두 완료 > chatroom finishdate 설정
+        if (room.getSellerStatus() == ChatStatus.COMPLETED && room.getBuyerStatus() == ChatStatus.COMPLETED) {
+            if (room.getFinishDate() == null) {
+                room.setFinishDate(LocalDateTime.now());
+            }
+        }
+
+        chatRoomRepository.save(room);
+
+        return ChatResponseDTO.ChatCompleteRsDTO.builder()
+                .buyerStatus(room.getBuyerStatus())
+                .sellerStatus(room.getSellerStatus())
+                .build();
+
+    }
+
+    //메시지 대화 내역 조회
+    public ChatResponseDTO.GetMessageTotalListDTO getMessageTotalList(Long chatRoomId, Long userId){
+        ChatRoom room = getChatRoomOrThrow(chatRoomId);
+
+        boolean isSeller = room.getSeller().getId().equals(userId);
+        boolean isBuyer = room.getBuyer().getId().equals(userId);
+
+        if (!isSeller && !isBuyer) {
+            throw new IllegalArgumentException("해당 채팅방의 참여자가 아닙니다.");
+        }
+        //채팅방의 모든 메시지 조회
+        List<ChatMessage> messageList = chatMessageRepository.findByChatRoomId(chatRoomId);
+
+        return ChatConverter.toDtoList(messageList, room.getId());
+    }
+
 
 }
