@@ -12,10 +12,14 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
 public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long>, JpaSpecificationExecutor<ChatRoom> {
+    List<ChatRoom> findBySellerIdOrBuyerId(Long sellerId, Long buyerId);
+    List<ChatRoom> findByBuyerId(Long buyerId);
+    List<ChatRoom> findBySellerId(Long sellerId);
 
     Optional<ChatRoom> findByPostIdAndBuyerId(Long postId, Long buyerId);
     @Query("SELECT new com.portiony.portiony.dto.user.PurchaseProjectionDto(" +
