@@ -16,12 +16,36 @@ import java.util.List;
 public class ChatController {
     private final ChatService chatService;
     //추후 모든 api에서 userid 삭제 > 토큰에서 빼올예정
+
+    //메시지 대화 내역 조회
+    @GetMapping("/{chatRoomId}/messages/{userId}")
+    public ResponseEntity<ChatResponseDTO.GetMessageTotalListDTO> getMessageTotalList(
+            @PathVariable Long chatRoomId,
+            @PathVariable Long userId
+            //@AuthenticationPrincipal CustomUserDetails userDetails
+    ){
+        //Long userId = userDetails.getUser().getId();
+        return ResponseEntity.ok(chatService.getMessageTotalList(chatRoomId, userId));
+    }
+
+    //채팅방 목록 조회
+    @GetMapping("/{userId}")
+    public ResponseEntity<ChatResponseDTO.ChatRoomListResponseDTO> getChatRoomList(
+            @RequestParam(name = "type", defaultValue = "all") String type, //query 파라미터, 디폴트는 전체
+            @PathVariable Long userId
+            //@AuthenticationPrincipal CustomUserDetails userDetails
+    ){
+        //Long userId = userDetails.getUser().getId();
+        return ResponseEntity.ok(chatService.getChatRoomList(userId, type));
+    }
+
     //채팅방 생성
     @PostMapping("/room")
     public ResponseEntity<ChatResponseDTO.CreateRoomRsDTO> createUser(
             @RequestBody @Valid ChatRequestDTO.CreateRoomRqDTO request){ //@PathVariable(name = "postId") Long postId){
         return ResponseEntity.ok(chatService.createChatRoom(request));
     }
+
     //메시지 - 이미지 외부 스토리지에 업로드
     @PostMapping("/{chatRoomId}/images/{userId}")
     public ResponseEntity<ChatResponseDTO.ChatImageUploadRsDTO> uploadImages(
@@ -36,6 +60,7 @@ public class ChatController {
                         .build()
         );
     }
+
     //메시지 읽음 처리
     @PatchMapping("/{chatRoomId}/read/{userId}")
     public ResponseEntity<Void> markMessagesAsRead(
@@ -47,6 +72,7 @@ public class ChatController {
         chatService.markMessagesAsRead(chatRoomId, userId);
         return ResponseEntity.ok().build();
     }
+
     //거래 완료
     @PatchMapping("/{chatRoomId}/complete/{userId}")
     public ResponseEntity<ChatResponseDTO.ChatCompleteRsDTO> chatToComplete(
@@ -56,16 +82,6 @@ public class ChatController {
     ) {
         //Long userId = userDetails.getUser().getId();
         return ResponseEntity.ok(chatService.chatToComplete(chatRoomId, userId));
-    }
-    //메시지 대화 내역 조회
-    @GetMapping("/{chatRoomId}/messages/{userId}")
-    public ResponseEntity<ChatResponseDTO.GetMessageTotalListDTO> getMessageTotalList(
-            @PathVariable Long chatRoomId,
-            @PathVariable Long userId
-            //@AuthenticationPrincipal CustomUserDetails userDetails
-    ){
-        //Long userId = userDetails.getUser().getId();
-        return ResponseEntity.ok(chatService.getMessageTotalList(chatRoomId, userId));
     }
 
 }

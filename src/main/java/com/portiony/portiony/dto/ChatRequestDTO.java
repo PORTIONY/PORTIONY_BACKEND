@@ -22,7 +22,7 @@ public class ChatRequestDTO {
     @Getter
     @Setter
     @NoArgsConstructor
-    public class ChatImageUploadDTO {
+    public static class ChatImageUploadDTO {
         @NotNull
         private List<MultipartFile> images;
     }

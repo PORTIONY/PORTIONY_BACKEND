@@ -12,10 +12,14 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
 public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long>, JpaSpecificationExecutor<ChatRoom> {
+    List<ChatRoom> findBySellerIdOrBuyerId(Long sellerId, Long buyerId);
+    List<ChatRoom> findByBuyerId(Long buyerId);
+    List<ChatRoom> findBySellerId(Long sellerId);
 
     Optional<ChatRoom> findByPostIdAndBuyerId(Long postId, Long buyerId);
     @Query("SELECT new com.portiony.portiony.dto.user.PurchaseProjectionDto(" +
@@ -45,6 +49,7 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long>, JpaSp
     """)
     Page<PurchaseProjectionDto> findPurchasesWithPost(@Param("userId") Long userId, @Param("status") PostStatus status, Pageable pageable);
 
+    // 구매자와 판매자 같은 아이디일 경우 방지 쿼리 추가 (2025.07.22)
     @Query("""
     SELECT new com.portiony.portiony.dto.user.SaleProjectionDto(
         cr.post.id, cr.post.title, cr.post.price, 
@@ -58,8 +63,10 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long>, JpaSp
     FROM ChatRoom cr JOIN cr.post p JOIN p.user u 
     JOIN Subregion s ON s.region = u.region
     JOIN Dong d ON d.subregion = s
-    WHERE p.user.id = :userId
+    WHERE cr.seller.id = :userId 
+    AND cr.buyer.id <> :userId
     AND (:status IS NULL OR p.status = :status)
+    
     """)
     Page<SaleProjectionDto> findSalesWithPost(@Param("userId") Long userId, @Param("status") PostStatus status, Pageable pageable);
 }
