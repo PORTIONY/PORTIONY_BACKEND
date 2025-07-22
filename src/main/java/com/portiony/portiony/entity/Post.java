@@ -79,4 +79,8 @@ public class Post extends BaseEntity {
     public void delete(){
         this.isDeleted = true;
     }
+
+    public void updateStatus(){
+        this.status = PostStatus.DONE;
+    }
 }

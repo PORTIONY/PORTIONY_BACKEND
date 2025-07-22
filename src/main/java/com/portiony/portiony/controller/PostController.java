@@ -67,4 +67,11 @@ public class PostController {
         postService.deletePost(postId, userDetails.getUser().getId());
         return ResponseEntity.ok().build();
     }
+
+    @PatchMapping("/{postId}/status")
+    public ResponseEntity<UpdatePostStatusResponse> updateStatus(
+            @PathVariable Long postId,
+            @AuthenticationPrincipal CustomUserDetails userDetails){
+        return ResponseEntity.ok(postService.updateStatus(postId, userDetails.getUser().getId()));
+    }
 }

@@ -109,4 +109,12 @@ public class PostService {
 
         post.delete();
     }
+
+    @Transactional
+    public UpdatePostStatusResponse updateStatus(Long postId, Long currentUserId) {
+        Post post = postRepository.findPostByIdAndUserId(postId, currentUserId).
+                orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "게시글이 없거나 권한이 없습니다."));
+        post.updateStatus();
+        return new UpdatePostStatusResponse();
+    }
 }
