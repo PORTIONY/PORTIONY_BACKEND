@@ -7,13 +7,13 @@ import com.portiony.portiony.entity.*;
 import com.portiony.portiony.entity.enums.PostStatus;
 import com.portiony.portiony.entity.enums.UserStatus;
 import com.portiony.portiony.repository.*;
-import com.portiony.portiony.specification.ChatRoomSpecifications;
-import com.portiony.portiony.specification.PostLikeSpecifications;
-import com.portiony.portiony.specification.ReviewSpecifications;
 import com.portiony.portiony.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
-import org.springframework.data.jpa.domain.Specification;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -37,18 +37,19 @@ public class UserService {
     private final AgreementRepository agreementRepository;
     private final UserAgreementRepository userAgreementRepository;
     private final UserPreferenceRepository userPreferenceRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtUtil jwtUtil;
+    private final RefreshTokenService refreshTokenService;
     private final ChatRoomRepository chatRoomRepository;
     private final PostImageRepository postImageRepository;
     private final ReviewRepository reviewRepository;
     private final PostLikeRepository postLikeRepository;
-    private final PasswordEncoder passwordEncoder;
-    private final JwtUtil jwtUtil;
 
-    public void signup(SignupRequestDto dto) {
+    // 공통 유저 생성 로직
+    private User createUser(SignupBaseDto dto) {
         if (userRepository.findByEmail(dto.getEmail()).isPresent()) {
             throw new IllegalArgumentException("이미 존재하는 이메일입니다.");
         }
-
         if (userRepository.findByNickname(dto.getNickname()).isPresent()) {
             throw new IllegalArgumentException("이미 존재하는 닉네임입니다.");
         }
@@ -60,7 +61,7 @@ public class UserService {
         Dong dong = dongRepository.findById(dto.getDongId())
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 동 정보입니다."));
 
-        String encodedPassword = passwordEncoder.encode(dto.getPassword());
+        String encodedPassword = dto.getPassword() != null ? passwordEncoder.encode(dto.getPassword()) : null;
 
         User user = User.builder()
                 .email(dto.getEmail())
@@ -72,36 +73,39 @@ public class UserService {
                 .dong(dong)
                 .build();
 
-        userRepository.save(user);
+        return userRepository.save(user);
+    }
 
-        // ✅ 사용자 선호정보 저장
+    private void saveAgreementsAndPreferences(SignupBaseDto dto, User user) {
         UserPreference preference = UserPreference.builder()
                 .user(user)
                 .mainCategory(dto.getMainCategory())
                 .purchaseReason(dto.getPurchaseReason())
                 .situation(dto.getSituation())
                 .build();
+        userPreferenceRepository.save(preference);
 
-        userPreferenceRepository.save(preference);  // ← 저장 필요!
-
-        // 약관 동의 저장
         List<Agreement> agreements = agreementRepository.findAllById(dto.getAgreementIds());
-
-        List<UserAgreement> userAgreements = new ArrayList<>();
-        for (Agreement agreement : agreements) {
-            userAgreements.add(UserAgreement.builder()
-                    .user(user)
-                    .agreement(agreement)
-                    .isAgreed(true)
-                    .build());
-        }
-
+        List<UserAgreement> userAgreements = agreements.stream()
+                .map(agreement -> UserAgreement.builder()
+                        .user(user)
+                        .agreement(agreement)
+                        .isAgreed(true)
+                        .build())
+                .toList();
         userAgreementRepository.saveAll(userAgreements);
     }
 
+    public LoginResponseDto signup(SignupRequestDto dto) {
+        User user = createUser(dto);
+        saveAgreementsAndPreferences(dto, user);
 
+        String accessToken = jwtUtil.generateAccessToken(user.getEmail());
+        String refreshToken = refreshTokenService.createRefreshToken(user.getEmail()).getToken();
 
-    // 일반 로그인
+        return new LoginResponseDto(accessToken, refreshToken);
+    }
+
     public LoginResponseDto login(LoginRequestDto dto) {
         User user = userRepository.findByEmail(dto.getEmail())
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 이메일입니다."));
@@ -110,63 +114,92 @@ public class UserService {
             throw new IllegalArgumentException("비밀번호가 일치하지 않습니다.");
         }
 
-        String token = jwtUtil.generateToken(user.getEmail());
-        return new LoginResponseDto(token);
+        String accessToken = jwtUtil.generateAccessToken(user.getEmail());
+        String refreshToken = refreshTokenService.createRefreshToken(user.getEmail()).getToken();
+
+        return new LoginResponseDto(accessToken, refreshToken);
     }
 
-    // 카카오 회원가입
-    public void kakaoSignup(KakaoSignupRequestDto dto) {
-        if (userRepository.findByEmail(dto.getEmail()).isPresent()) {
-            throw new IllegalArgumentException("이미 가입된 이메일입니다.");
-        }
+    public KakaoSignupResponseDto kakaoSignup(KakaoSignupRequestDto dto) {
+        User user = createUser(dto);
+        saveAgreementsAndPreferences(dto, user);
 
-        // 지역, 서브지역, 동 정보 조회
-        Region region = regionRepository.findById(dto.getRegionId())
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 지역입니다."));
-        Subregion subregion = subregionRepository.findById(dto.getSubregionId())
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 하위 지역입니다."));
-        Dong dong = dongRepository.findById(dto.getDongId())
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 동 정보입니다."));
+        String accessToken = jwtUtil.generateAccessToken(user.getEmail());
+        String refreshToken = refreshTokenService.createRefreshToken(user.getEmail()).getToken();
 
-        // 사용자 엔티티 생성 및 저장
-        User user = User.builder()
-                .email(dto.getEmail())
-                .nickname(dto.getNickname())
-                .profileImage(dto.getProfileImage())
-                .region(region)
-                .subregion(subregion)
-                .dong(dong)
-                .build();
-
-        userRepository.save(user);
-
-        // 약관 동의 저장
-        List<Agreement> agreements = agreementRepository.findAllById(dto.getAgreementIds());
-        List<UserAgreement> userAgreements = new ArrayList<>();
-        for (Agreement agreement : agreements) {
-            userAgreements.add(UserAgreement.builder()
-                    .user(user)
-                    .agreement(agreement)
-                    .isAgreed(true)
-                    .build());
-        }
-        userAgreementRepository.saveAll(userAgreements);
-
-        // 사용자 선호 정보 저장
-        UserPreference preference = UserPreference.builder()
-                .user(user)
-                .mainCategory(dto.getMainCategory())
-                .purchaseReason(dto.getPurchaseReason())
-                .situation(dto.getSituation())
-                .build();
-
-        userPreferenceRepository.save(preference);
+        return new KakaoSignupResponseDto(accessToken, refreshToken);
     }
 
-    // 프로필 조회
+    // 프로필 조회 (이메일로찾기)
     private User findUserById(Long userId) {
         return userRepository.findById(userId).
                 orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,"사용자를 찾을 수 없습니다."));
+    }
+
+    // 기본 정렬 (최신순/오래된순, 가격낮은순/가격높은순)
+    // 정렬 병렬 적용.
+    private Sort getSort(String dateSort, String priceSort) {
+        Sort result = Sort.by(Sort.Direction.DESC, "post.createdAt");
+
+        if ("recent".equals(dateSort)) {
+            result = Sort.by(Sort.Direction.DESC, "post.createdAt");
+        } else if ("oldest".equals(dateSort)) {
+            result = Sort.by(Sort.Direction.ASC, "post.createdAt");
+        }
+
+        if ("asc".equals(priceSort)) {
+            result = result.and(Sort.by(Sort.Direction.ASC, "post.price"));
+        } else if ("desc".equals(priceSort)) {
+            result = result.and(Sort.by(Sort.Direction.DESC, "post.price"));
+        }
+
+        return result;
+    }
+
+    // 리뷰 정렬
+    // 정렬 병렬 적용
+    private Sort getReviewSort(String starSort, String reviewSort) {
+        Sort result = Sort.unsorted();
+
+        if ("recent".equalsIgnoreCase(reviewSort)) {
+            result = Sort.by(Sort.Direction.DESC, "chatRoom.finishDate");
+        } else if ("oldest".equalsIgnoreCase(reviewSort)) {
+            result = Sort.by(Sort.Direction.ASC, "chatRoom.finishDate");
+        }
+
+        if("high".equalsIgnoreCase(starSort)) {
+            result = result.and(Sort.by(Sort.Direction.DESC, "star"));
+        } else if ("low".equalsIgnoreCase(starSort)) {
+            result = result.and(Sort.by(Sort.Direction.ASC, "star"));
+        }
+
+        return result;
+    }
+
+    // 찜 정렬
+    // 정렬 단일 적용
+    private Sort getWishlistSort(String postLikert) {
+        switch (postLikert) {
+            // 최신 찜순
+            case "recent" :
+                return Sort.by(Sort.Direction.DESC, "createdAt");
+
+            //오래된 찜순
+            case  "oldest" :
+                return Sort.by(Sort.Direction.ASC, "createdAt");
+
+            // 마감임박순
+            case "deadline_asc":
+                return Sort.by(Sort.Direction.ASC, "post.deadline");
+
+            // 마감여유순
+            case "deadline_desc":
+                return Sort.by(Sort.Direction.DESC, "post.deadline");
+
+            // 디폴트값은 오래된찜순
+            default:
+                return Sort.by(Sort.Direction.ASC, "createdAt");
+        }
     }
 
     // 프로필 조회
@@ -176,15 +209,15 @@ public class UserService {
         // TODO: 구매이력, 판매이력 수 계산 (주문/게시글 도메인 연동)
         // TODO: 긍정후기비율 계산 (리뷰 도메인 연동)
 
-        return  new UserProfileResponse(
-                user.getId(),
-                user.getNickname(),
-                user.getProfileImage(),
-                user.getPurchase_count(),
-                user.getSalesCount(),
-                user.getStar(),
-                true
-        );
+        return UserProfileResponse.builder()
+                .userId(user.getId())
+                .nickname(user.getNickname())
+                .profileImage(user.getProfileImage())
+                .purchasesCount(user.getPurchase_count())
+                .salesCount(user.getSalesCount())
+                .positiveRate(user.getStar()) // 임시 값
+                .isMine(true)
+                .build();
     }
 
     // 프로필 편집 조회
@@ -242,46 +275,29 @@ public class UserService {
         user.setStatus(UserStatus.WITHDRAWN);
     }
 
-    // 기본 정렬
-    private Sort getSort(String sort, String priceOrder) {
-        Sort result = Sort.by(Sort.Direction.DESC, "post.createdAt");
-
-        if ("recent".equals(sort)) {
-            result = Sort.by(Sort.Direction.DESC, "post.createdAt");
-        } else if ("oldest".equals(sort)) {
-            result = Sort.by(Sort.Direction.ASC, "post.createdAt");
-        }
-
-        if ("asc".equals(priceOrder)) {
-            result = result.and(Sort.by(Sort.Direction.ASC, "post.price"));
-        } else if ("desc".equals(priceOrder)) {
-            result = result.and(Sort.by(Sort.Direction.DESC, "post.price"));
-        }
-
-        return result;
-    }
-
     // 내 구매 내역 조회
-    public PageResponse<PurchaseHistoryResponse> getMyPurchases(Long userId, String sort, String priceOrder, int page, int size) {
-        Pageable pageable = PageRequest.of(page - 1, size, getSort(sort, priceOrder));
+    public PageResponse<PurchaseHistoryResponse> getMyPurchases(Long userId, String dateSort, String priceSort, PostStatus status, int page, int size) {
 
-        Page<PurchaseProjectionDto> purchases = chatRoomRepository.findPurchasesIncludePost(userId, pageable);
+        Pageable pageable = PageRequest.of(page - 1, size, getSort(dateSort, priceSort));
+
+        Page<PurchaseProjectionDto> purchases = chatRoomRepository.findPurchasesWithPost(userId, status, pageable);
 
         List<PurchaseHistoryResponse> content = purchases.getContent().stream()
                 .map(dto -> {
                     String thumbnail = postImageRepository.findThumbnailUrlByPostId(dto.getPostId())
-                            .get();
+                            .orElse(null);
 
-                    return new PurchaseHistoryResponse(
-                            dto.getPostId(),
-                            dto.getTitle(),
-                            dto.getPrice(),
-                            thumbnail,
-                            dto.getRegion(),
-                            (int) ChronoUnit.DAYS.between(LocalDateTime.now(), dto.getDeadline()),
-                            dto.getPurchasedAt(),
-                            dto.getStatus().name()
-                    );
+                    return PurchaseHistoryResponse.builder()
+                            .postId(dto.getPostId())
+                            .title(dto.getTitle())
+                            .price(dto.getPrice())
+                            .thumbnail(thumbnail)
+                            .region(dto.getRegion())
+                            //마감일 지나면 날짜가 음수로 이상하게 출력될 수 있을 것 같음. 추후 업데이트 고려하기.
+                            .daysLeft((int) ChronoUnit.DAYS.between(LocalDateTime.now(), dto.getDeadline()))
+                            .purchasedAt(dto.getCreatedAt())
+                            .status(dto.getStatus())
+                            .build();
                 })
                 .collect(Collectors.toList());
 
@@ -289,89 +305,57 @@ public class UserService {
     }
 
     // 판매 내역 조회 (특정 유저)
-    public PageResponse<SaleHistoryResponse> getMySales(Long myId, Long userId, String sort, String priceOrder, String statusFilter, int page, int size) {
+    public PageResponse<SaleHistoryResponse> getMySales(Long myId, Long userId, String dateSort, String priceSort, PostStatus status, int page, int size) {
 
-        if (!myId.equals(userId)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
-        }
+        Pageable pageable = PageRequest.of(page - 1, size, getSort(dateSort, priceSort));
 
-        Pageable pageable = PageRequest.of(page - 1, size, getSort(sort, priceOrder));
-
-        Specification<ChatRoom> specification = ChatRoomSpecifications.sellerIdEquals(userId);
-
-        if(statusFilter != null && !statusFilter.isEmpty()) {
-            try{
-                PostStatus status = PostStatus.valueOf(statusFilter.toUpperCase());
-                specification = specification.and(ChatRoomSpecifications.postStatusEquals(status));
-            } catch (IllegalArgumentException e) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
-            }
-        }
-
-        Page<ChatRoom> sales =  chatRoomRepository.findAll(specification, pageable);
+        Page<SaleProjectionDto> sales = chatRoomRepository.findSalesWithPost(userId, status, pageable);
 
         List<SaleHistoryResponse> content = sales.getContent().stream()
-                .map(chatRoom -> {
-                    Post post = chatRoom.getPost();
-                    String thumbnail = postImageRepository.findThumbnailUrlByPostId(post.getId()).get();
-                    return new SaleHistoryResponse(
-                            post.getId(),
-                            post.getTitle(),
-                            post.getPrice(),
-                            thumbnail,
-                            post.getUser().getRegion().getCity(),
-                            (int) ChronoUnit.DAYS.between(LocalDateTime.now(), post.getDeadline()),
-                            post.getCreatedAt(),
-                            post.getStatus().name()
-                    );
+                .map(dto -> {
+                    String thumbnail = postImageRepository.findThumbnailUrlByPostId(dto.getPostId())
+                            .orElse(null);
+
+                    return SaleHistoryResponse.builder()
+                            .postId(dto.getPostId())
+                            .title(dto.getTitle())
+                            .price(dto.getPrice())
+                            .thumbnail(thumbnail)
+                            .region(dto.getRegion())
+                            //마감일 지나면 날짜가 음수로 이상하게 출력될 수 있을 것 같음. 추후 업데이트 고려하기.
+                            .daysLeft((int) ChronoUnit.DAYS.between(LocalDateTime.now(), dto.getDeadline()))
+                            .createdAt(dto.getCreatedAt())
+                            .status(dto.getStatus())
+                            .build();
                 })
                 .collect(Collectors.toList());
 
         return new PageResponse<>(sales.getTotalElements(), sales.getNumber() + 1, content);
     }
 
-    // 리뷰 정렬
-    private Sort getReviewSort(String starSort, String reviewSort) {
-        Sort result = Sort.unsorted();
-
-        if ("recent".equalsIgnoreCase(reviewSort)) {
-            result = Sort.by(Sort.Direction.DESC, "chatRoom.finishDate");
-        } else if ("oldest".equalsIgnoreCase(reviewSort)) {
-            result = Sort.by(Sort.Direction.ASC, "chatRoom.finishDate");
-        }
-
-        if("high".equalsIgnoreCase(starSort)) {
-            result = result.and(Sort.by(Sort.Direction.DESC, "star"));
-        } else if ("low".equalsIgnoreCase(starSort)) {
-            result = result.and(Sort.by(Sort.Direction.ASC, "star"));
-        }
-
-        return result;
-    }
-
     // 내가 쓴 후기 조회
-    public PageResponse<ReviewHistoryResponse> getReviewsByMe(Long userId, String type, String sort, String writtenStatus, int page, int size) {
-        Sort sortOption = getSort(sort, type);
+    public PageResponse<ReviewHistoryResponse> getReviewsByMe(Long userId, String type, String reviewSort, boolean writtenStatus, int page, int size) {
+
+        Sort sortOption = getSort(reviewSort, type);
         Pageable pageable = PageRequest.of(page -1, size, sortOption);
 
-        Specification<Review> specification = ReviewSpecifications.filterReviewsByMe(userId, type, writtenStatus);
-        Page<Review> reviews = reviewRepository.findAll(specification, pageable);
+        Page<Review> reviews = reviewRepository.findReviewsByMe(userId, type, writtenStatus, pageable);
 
         List<ReviewHistoryResponse> content = reviews.getContent().stream()
                 .map(review -> {
                     ChatRoom chatRoom = review.getChatRoom();
                     Post post = chatRoom.getPost();
 
-                    return new ReviewHistoryResponse(
-                            post.getId(),
-                            review.getId(),
-                            review.getStar() != 0.0,
-                            post.getTitle(),
-                            chatRoom.getSeller().getId().equals(userId) ? "sale" : "purchase",
-                            chatRoom.getFinishDate().toLocalDate(),
-                            review.getChoice(),
-                            review.getContent()
-                    );
+                    return ReviewHistoryResponse.builder()
+                            .postId(post.getId())
+                            .reviewId(review.getId())
+                            .isWritten(review.getStar() != 0.0)
+                            .title(post.getTitle())
+                            .type(chatRoom.getSeller().getId().equals(userId) ? "sale" : "purchase")
+                            .transactionDate(chatRoom.getFinishDate())
+                            .choice(review.getChoice())
+                            .content(review.getContent())
+                            .build();
                 })
                 .collect(Collectors.toList());
 
@@ -379,101 +363,80 @@ public class UserService {
     }
 
     // 받은 후기 조회
-    public PageResponse<ReviewHistoryResponse> getReviewsByOther(Long myId, Long userId, String type, String reviewSort, String starSort, int page, int size) {
-
-        if (!myId.equals(userId)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
-        }
+    public PageResponse<ReviewHistoryResponse> getReviewsByOther(Long myId, Long userId, boolean writtenStatus, String type, String reviewSort, String starSort, int page, int size) {
 
         Sort sortOption = getReviewSort(starSort, reviewSort);
         Pageable pageable = PageRequest.of(page - 1, size, sortOption);
 
-        Specification<Review> specification = ReviewSpecifications.filterReviewsByOther(userId, type);
-        Page<Review> reviews = reviewRepository.findAll(specification, pageable);
+        Page<Review> reviews = reviewRepository.findReviewsByOther(userId, writtenStatus, type, pageable);
 
         List<ReviewHistoryResponse> content = reviews.getContent().stream()
                 .map(review -> {
                     ChatRoom chatRoom = review.getChatRoom();
                     Post post = chatRoom.getPost();
 
-                    return new ReviewHistoryResponse(
-                            post.getId(),
-                            review.getId(),
-                            review.getStar() != 0.0,
-                            post.getTitle(),
-                            chatRoom.getSeller().getId().equals(userId) ? "sale" : "purchase",
-                            chatRoom.getFinishDate().toLocalDate(),
-                            review.getChoice(),
-                            review.getContent()
-                    );
+                    return ReviewHistoryResponse.builder()
+                            .postId(post.getId())
+                            .reviewId(review.getId())
+                            .isWritten(review.getStar() != 0.0)
+                            .title(post.getTitle())
+                            .type(chatRoom.getSeller().getId().equals(userId) ? "sale" : "purchase")
+                            .transactionDate(chatRoom.getFinishDate())
+                            .choice(review.getChoice())
+                            .content(review.getContent())
+                            .build();
                 })
                 .collect(Collectors.toList());
 
         return new PageResponse<>(reviews.getTotalElements(), reviews.getNumber() + 1, content);
     }
 
-    // 찜 정렬
-    private Sort getWishlistSort(String sort) {
-        switch (sort) {
-            // 최신 찜순
-            case "recent" :
-                return Sort.by(Sort.Direction.DESC, "createdAt");
-
-            //오래된 찜순
-            case  "oldest" :
-                return Sort.by(Sort.Direction.ASC, "createdAt");
-
-            // 마감임박순
-            case "deadline_asc":
-                return Sort.by(Sort.Direction.ASC, "post.deadline");
-
-            // 마감여유순
-            case "deadline_desc":
-                return Sort.by(Sort.Direction.DESC, "post.deadline");
-
-            // 디폴트값은 오래된찜순
-            default:
-                return Sort.by(Sort.Direction.ASC, "createdAt");
-        }
-    }
-
     // 찜 내역 조회
-    public PageResponse<PostLikeResponse> getWishlist(Long userId, String sort, String status,int page, int size) {
-        Pageable pageable = PageRequest.of(page - 1, size, getWishlistSort(sort));
-        Specification<PostLike> specification = PostLikeSpecifications.filterByStatusAndUser(userId, status);
+    public PageResponse<PostLikeHistoryResponse> getWishlist(Long userId, String postLikeSort, PostStatus status, int page, int size) {
 
-        Page<PostLike> result = postLikeRepository.findAll(specification, pageable);
+        Pageable pageable = PageRequest.of(page - 1, size, getWishlistSort(postLikeSort));
 
-        List<PostLikeResponse> content = result.getContent().stream().map(dto -> {
-            Post post = dto.getPost();
-            String thumbnail = postImageRepository.findThumbnailUrlByPostId(post.getId())
-                    .get();
+        Page<PostLikeProjectionDto> likes = postLikeRepository.findPostLikeWithRegion(userId, status, pageable);
 
-            return new PostLikeResponse(
-                    post.getId(),
-                    post.getTitle(),
-                    post.getPrice(),
-                    thumbnail,
-                    post.getUser().getRegion().getCity(),
-                    post.getCreatedAt(),
-                    post.getDeadline(),
-                    post.getStatus().name()
-            );
-        }).collect(Collectors.toList());
+        List<PostLikeHistoryResponse> content = likes.getContent().stream()
+            .map(dto -> {
+                String thumbnail = postImageRepository.findThumbnailUrlByPostId(dto.getPostId())
+                        .orElse(null);
 
-        return new PageResponse<>(result.getTotalElements(), result.getNumber() + 1, content);
+                return PostLikeHistoryResponse.builder()
+                        .postId(dto.getPostId())
+                        .title(dto.getTitle())
+                        .price(dto.getPrice())
+                        .thumbnail(thumbnail)
+                        .region(dto.getRegion())
+                        .createdAt(dto.getCreatedAt())
+                        //마감일 지나면 날짜가 음수로 이상하게 출력될 수 있을 것 같음. 추후 업데이트 고려하기.
+                        .daysLeft((int) ChronoUnit.DAYS.between(LocalDateTime.now(), dto.getDeadline()))
+                        .status(dto.getStatus())
+                        .build();
+            }).collect(Collectors.toList());
+
+        return new PageResponse<>(likes.getTotalElements(), likes.getNumber() + 1, content);
     }
 
     // 리뷰 등록
     @Transactional
-    public void registerReview(Long userId, Long reviewId,ReviewRegisterRequest request) {
-        Review review = reviewRepository.findById(reviewId).get();
+    public void registerReview(Long userId, Long reviewId, ReviewRegisterRequest request) {
+
+        Review review = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "해당 리뷰가 존재하지 않습니다."));
+
+        if (!review.getWriter().getId().equals(userId) &&
+                !review.getTarget().getId().equals(userId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "리뷰 작성 권한이 없습니다.");
+        }
 
         boolean hasChoice = request.getChoice() != null;
         boolean hasContent = request.getContent() != null;
 
         review.setStar(request.getStar());
 
+        // NOT choice && content 검증로직
         if(hasChoice) {
             review.setChoice(request.getChoice());
             review.setContent(null);
@@ -489,8 +452,12 @@ public class UserService {
     // 리뷰 삭제
     @Transactional
     public void deleteReview(Long userId, Long reviewId) {
-        Review review = reviewRepository.findById(reviewId).get();
 
+        Review review = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "해당 리뷰가 존재하지 않습니다."));
+
+        // 실제 삭제가아닌 Review DTO에서 isWritten 판단 기준인 star(별점) 기준 및 choice, content 초기값으로 세팅
+        // soft-delete 방식 사용
         review.setStar(0.0);
         review.setChoice(null);
         review.setContent(null);

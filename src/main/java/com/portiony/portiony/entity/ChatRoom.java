@@ -23,7 +23,12 @@ public class ChatRoom extends BaseEntity {
     @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30, columnDefinition = "varchar(30) default 'WAITING'")
-    private ChatStatus status = ChatStatus.WAITING;
+    private ChatStatus sellerStatus = ChatStatus.WAITING;
+
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 30, columnDefinition = "varchar(30) default 'WAITING'")
+    private ChatStatus buyerStatus = ChatStatus.WAITING;
 
     @Column(name = "finish_date")
     private LocalDateTime finishDate;

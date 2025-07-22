@@ -8,7 +8,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ReviewRegisterRequest {
-
     private Double star;
     private Integer choice;
     private String content;
