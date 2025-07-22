@@ -309,7 +309,6 @@ public class UserService {
     }
 
     // 내 구매 내역 조회
-    // TODO: 무조건 get()하지말고 예외처리할지 고려해볼 것.
     public PageResponse<PurchaseHistoryResponse> getMyPurchases(Long userId, String dateSort, String priceSort, PostStatus status, int page, int size) {
 
         Pageable pageable = PageRequest.of(page - 1, size, getSort(dateSort, priceSort));
@@ -319,7 +318,7 @@ public class UserService {
         List<PurchaseHistoryResponse> content = purchases.getContent().stream()
                 .map(dto -> {
                     String thumbnail = postImageRepository.findThumbnailUrlByPostId(dto.getPostId())
-                            .get();
+                            .orElse(null);
 
                     return PurchaseHistoryResponse.builder()
                             .postId(dto.getPostId())
@@ -329,7 +328,7 @@ public class UserService {
                             .region(dto.getRegion())
                             //마감일 지나면 날짜가 음수로 이상하게 출력될 수 있을 것 같음. 추후 업데이트 고려하기.
                             .daysLeft((int) ChronoUnit.DAYS.between(LocalDateTime.now(), dto.getDeadline()))
-                            .createdAt(dto.getCreatedAt())
+                            .purchasedAt(dto.getCreatedAt())
                             .status(dto.getStatus())
                             .build();
                 })
@@ -339,7 +338,6 @@ public class UserService {
     }
 
     // 판매 내역 조회 (특정 유저)
-    // TODO: 무조건 get()하지말고 예외처리할지 고려해볼 것.
     public PageResponse<SaleHistoryResponse> getMySales(Long myId, Long userId, String dateSort, String priceSort, PostStatus status, int page, int size) {
 
         Pageable pageable = PageRequest.of(page - 1, size, getSort(dateSort, priceSort));
@@ -349,7 +347,7 @@ public class UserService {
         List<SaleHistoryResponse> content = sales.getContent().stream()
                 .map(dto -> {
                     String thumbnail = postImageRepository.findThumbnailUrlByPostId(dto.getPostId())
-                            .get();
+                            .orElse(null);
 
                     return SaleHistoryResponse.builder()
                             .postId(dto.getPostId())
@@ -427,7 +425,6 @@ public class UserService {
     }
 
     // 찜 내역 조회
-    // TODO: 무조건 get()하지말고 예외처리할지 고려해볼 것.
     public PageResponse<PostLikeHistoryResponse> getWishlist(Long userId, String postLikeSort, PostStatus status, int page, int size) {
 
         Pageable pageable = PageRequest.of(page - 1, size, getWishlistSort(postLikeSort));
@@ -437,7 +434,7 @@ public class UserService {
         List<PostLikeHistoryResponse> content = likes.getContent().stream()
             .map(dto -> {
                 String thumbnail = postImageRepository.findThumbnailUrlByPostId(dto.getPostId())
-                        .get();
+                        .orElse(null);
 
                 return PostLikeHistoryResponse.builder()
                         .postId(dto.getPostId())
@@ -456,11 +453,16 @@ public class UserService {
     }
 
     // 리뷰 등록
-    // TODO: 무조건 get()하지말고 예외처리할지 고려해볼 것.
     @Transactional
     public void registerReview(Long userId, Long reviewId, ReviewRegisterRequest request) {
 
-        Review review = reviewRepository.findById(reviewId).get();
+        Review review = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "해당 리뷰가 존재하지 않습니다."));
+
+        if (!review.getWriter().getId().equals(userId) &&
+                !review.getTarget().getId().equals(userId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "리뷰 작성 권한이 없습니다.");
+        }
 
         boolean hasChoice = request.getChoice() != null;
         boolean hasContent = request.getContent() != null;
@@ -481,11 +483,11 @@ public class UserService {
     }
 
     // 리뷰 삭제
-    // TODO: 무조건 get()하지말고 예외처리할지 고려해볼 것.
     @Transactional
     public void deleteReview(Long userId, Long reviewId) {
 
-        Review review = reviewRepository.findById(reviewId).get();
+        Review review = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "해당 리뷰가 존재하지 않습니다."));
 
         // 실제 삭제가아닌 Review DTO에서 isWritten 판단 기준인 star(별점) 기준 및 choice, content 초기값으로 세팅
         // soft-delete 방식 사용

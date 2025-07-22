@@ -41,6 +41,12 @@ spring:
             user-info-uri: https://kapi.kakao.com/v2/user/me
             user-name-attribute: id
 
+
+logging:
+  level:
+    org.springframework.web: DEBUG
+    org.springframework.http.converter.json: DEBUG
+
 #frontend:
 #  domain: ${FRONT_DOMAIN}
 #

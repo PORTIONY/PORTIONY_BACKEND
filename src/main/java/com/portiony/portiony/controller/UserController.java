@@ -19,6 +19,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -27,6 +28,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
+@Slf4j
 public class UserController {
 
     private final UserService userService;
@@ -189,6 +191,11 @@ public class UserController {
             @PathVariable Long reviewId,
             @RequestBody @Valid ReviewRegisterRequest request
     ) {
+
+        //후기등록 api 로그
+        log.info("리뷰 등록 요청: reviewId={}, star={}, choice={}, content={}",
+                reviewId, request.getStar(), request.getChoice(), request.getContent());
+
         Long userId = extrctUserIdFromToken(authHeader);
         userService.registerReview(userId, reviewId, request);
         return ResponseEntity.ok(Collections.singletonMap("message", "후기가 등록되었습니다."));
