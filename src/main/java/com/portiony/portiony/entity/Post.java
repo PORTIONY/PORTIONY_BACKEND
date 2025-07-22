@@ -68,4 +68,14 @@ public class Post extends BaseEntity {
     @Column(name = "is_deleted", nullable = false, columnDefinition = "boolean default false")
     private boolean isDeleted = false;
 
+    public void update(String title, String description, int capacity, int price,
+                       String unit, LocalDateTime deadline, DeliveryMethod deliveryMethod){
+        this.title = title;
+        this.description = description;
+        this.capacity = capacity;
+        this.price = price;
+        this.unit = unit;
+        this.deadline = deadline;
+        this.deliveryMethod = deliveryMethod;
+    }
 }

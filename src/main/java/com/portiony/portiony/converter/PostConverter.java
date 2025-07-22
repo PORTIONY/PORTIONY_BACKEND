@@ -3,6 +3,7 @@ package com.portiony.portiony.converter;
 import com.portiony.portiony.dto.Post.CreatePostRequest;
 import com.portiony.portiony.dto.Post.PostDetailResponse;
 import com.portiony.portiony.dto.Post.SellerDTO;
+import com.portiony.portiony.dto.Post.UpdatePostRequest;
 import com.portiony.portiony.entity.Post;
 import com.portiony.portiony.entity.PostCategory;
 import com.portiony.portiony.entity.User;
@@ -63,9 +64,19 @@ public class PostConverter {
                 .isAgree(post.isAgree())
                 //.images()
                 //.likes()
-                //.commentCount()
                 .seller(seller)
                 .build();
     }
 
+    public static void update(Post post, UpdatePostRequest request, DeliveryMethod method){
+        post.update(
+                request.getTitle(),
+                request.getDescription(),
+                request.getCapacity(),
+                request.getPrice(),
+                request.getUnit(),
+                request.getDeadline(),
+                method
+        );
+    }
 }

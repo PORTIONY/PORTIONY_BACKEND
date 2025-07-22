@@ -1,8 +1,6 @@
 package com.portiony.portiony.controller;
 
-import com.portiony.portiony.dto.Post.CreatePostRequest;
-import com.portiony.portiony.dto.Post.CreatePostResponse;
-import com.portiony.portiony.dto.Post.PostWithCommentsResponse;
+import com.portiony.portiony.dto.Post.*;
 import com.portiony.portiony.dto.comment.CommentListResponse;
 import com.portiony.portiony.dto.comment.CreateCommentRequest;
 import com.portiony.portiony.dto.comment.CreateCommentResponse;
@@ -46,6 +44,12 @@ public class PostController {
     @PostMapping("/{postId}/comments")
     public ResponseEntity<CreateCommentResponse> createComments(@PathVariable Long postId, @RequestBody CreateCommentRequest request) {
         CreateCommentResponse response = postService.createComment(request, postId);
+        return ResponseEntity.ok(response);
+    }
+
+    @PatchMapping("/{postId}")
+    public ResponseEntity<UpdatePostResponse> updatePost(@PathVariable Long postId, @RequestBody UpdatePostRequest request){
+        UpdatePostResponse response = postService.updatePost(postId, request, 15L);
         return ResponseEntity.ok(response);
     }
 }

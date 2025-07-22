@@ -2,9 +2,7 @@ package com.portiony.portiony.service;
 
 import com.portiony.portiony.converter.CommentConverter;
 import com.portiony.portiony.converter.PostConverter;
-import com.portiony.portiony.dto.Post.CreatePostRequest;
-import com.portiony.portiony.dto.Post.PostDetailResponse;
-import com.portiony.portiony.dto.Post.PostWithCommentsResponse;
+import com.portiony.portiony.dto.Post.*;
 import com.portiony.portiony.dto.comment.CommentDTO;
 import com.portiony.portiony.dto.comment.CommentListResponse;
 import com.portiony.portiony.dto.comment.CreateCommentRequest;
@@ -13,6 +11,7 @@ import com.portiony.portiony.entity.Post;
 import com.portiony.portiony.entity.PostCategory;
 import com.portiony.portiony.entity.PostComment;
 import com.portiony.portiony.entity.User;
+import com.portiony.portiony.entity.enums.DeliveryMethod;
 import com.portiony.portiony.repository.CommentRepository;
 import com.portiony.portiony.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
@@ -20,10 +19,13 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import com.portiony.portiony.repository.PostRepository;
 
 import org.springframework.data.domain.Pageable;
+import org.springframework.web.server.ResponseStatusException;
+
 import java.util.List;
 
 @RequiredArgsConstructor
@@ -79,5 +81,23 @@ public class PostService {
         Long totalCount = commentRepository.countByPostIdAndIsDeletedFalse(postId);
         List<CommentDTO> items = commentRepository.findAllByPostId(postId, pageable);
         return new CommentListResponse(totalCount, items);
+    }
+
+    @Transactional
+    public UpdatePostResponse updatePost(Long postId,
+                                         UpdatePostRequest request,
+                                         Long currentUserId) {
+
+        Post post = postRepository.findPostByIdAndUserId(postId, currentUserId).
+                orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "게시글이 없거나 권한이 없습니다."));
+        DeliveryMethod method;
+        try {
+            method = DeliveryMethod.valueOf(request.getDeliveryMethod());
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "유효하지 않은 배송 방법입니다.");
+        }
+
+        PostConverter.update(post, request, method);
+        return new UpdatePostResponse();
     }
 }
