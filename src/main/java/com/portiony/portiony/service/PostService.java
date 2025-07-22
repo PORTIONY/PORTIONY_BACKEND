@@ -53,7 +53,7 @@ public class PostService {
 
 
     public PostWithCommentsResponse getPostWithComments(Long postId) {
-        Post post = postRepository.findById(postId)
+        Post post = postRepository.findPostById(postId)
                 .orElseThrow(()->new IllegalArgumentException("게시글이 존재하지 않습니다."));
         PostDetailResponse postDetailResponse = PostConverter.toPostDetailResponse(post);
         Pageable pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt"));
@@ -76,6 +76,9 @@ public class PostService {
     }
 
     public CommentListResponse getCommentsByPostId(Long postId, Pageable pageable) {
+        postRepository.findPostById(postId)
+                .orElseThrow(() -> new EntityNotFoundException("게시글이 존재하지 않습니다."));
+
         Long totalCount = commentRepository.countByPostIdAndIsDeletedFalse(postId);
         List<CommentDTO> items = commentRepository.findAllByPostId(postId, pageable);
         return new CommentListResponse(totalCount, items);
@@ -97,5 +100,13 @@ public class PostService {
 
         PostConverter.update(post, request, method);
         return new UpdatePostResponse();
+    }
+
+    @Transactional
+    public void deletePost(Long postId, Long currentUserId) {
+        Post post = postRepository.findPostByIdAndUserId(postId, currentUserId).
+                orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "게시글이 없거나 권한이 없습니다."));
+
+        post.delete();
     }
 }

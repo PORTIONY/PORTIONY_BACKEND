@@ -3,13 +3,10 @@ package com.portiony.portiony.entity;
 import com.portiony.portiony.entity.common.BaseEntity;
 import com.portiony.portiony.entity.enums.PostStatus;
 import com.portiony.portiony.entity.enums.DeliveryMethod;
-import com.portiony.portiony.entity.enums.UserRole;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 
 @Entity
 @Getter
@@ -77,5 +74,9 @@ public class Post extends BaseEntity {
         this.unit = unit;
         this.deadline = deadline;
         this.deliveryMethod = deliveryMethod;
+    }
+
+    public void delete(){
+        this.isDeleted = true;
     }
 }

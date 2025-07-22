@@ -11,7 +11,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import org.springframework.data.domain.Pageable;
@@ -59,5 +58,13 @@ public class PostController {
                                                          @RequestBody UpdatePostRequest request){
         UpdatePostResponse response = postService.updatePost(postId, request, userDetails.getUser().getId());
         return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping("/{postId}")
+    public ResponseEntity<Void> deletePost(
+            @PathVariable Long postId,
+            @AuthenticationPrincipal CustomUserDetails userDetails){
+        postService.deletePost(postId, userDetails.getUser().getId());
+        return ResponseEntity.ok().build();
     }
 }
