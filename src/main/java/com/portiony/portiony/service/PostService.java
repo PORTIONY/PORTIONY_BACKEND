@@ -15,6 +15,7 @@ import com.portiony.portiony.security.CustomUserDetails;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
@@ -23,8 +24,6 @@ import com.portiony.portiony.repository.PostRepository;
 
 import org.springframework.data.domain.Pageable;
 import org.springframework.web.server.ResponseStatusException;
-
-import java.util.List;
 
 @RequiredArgsConstructor
 @Service
@@ -77,7 +76,11 @@ public class PostService {
                 .orElseThrow(() -> new EntityNotFoundException("게시글이 존재하지 않습니다."));
 
         Long totalCount = commentRepository.countByPostIdAndIsDeletedFalse(postId);
-        List<CommentDTO> items = commentRepository.findAllByPostId(postId, pageable);
+        postRepository.findPostById(postId)
+                .orElseThrow(() -> new EntityNotFoundException("게시글이 존재하지 않습니다."));
+
+        Page<CommentDTO> items = commentRepository.findAllByPostId(postId, pageable);
+
         return new CommentListResponse(totalCount, items);
     }
 

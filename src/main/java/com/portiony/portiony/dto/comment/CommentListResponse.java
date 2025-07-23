@@ -1,15 +1,25 @@
 package com.portiony.portiony.dto.comment;
 
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
-
-import java.util.List;
+import org.springframework.data.domain.Page;
 
 @Getter
 @Setter
-@AllArgsConstructor
 public class CommentListResponse {
     Long totalCount;
-    List<CommentDTO> items;
+
+    Long pageSize;
+    Long totalPages;
+    Long currentPage;
+
+    Page<CommentDTO> items;
+
+    public CommentListResponse(Long totalCount, Page<CommentDTO> items) {
+        this.totalCount = totalCount;
+        this.items = items;
+        this.pageSize = (long) items.getSize();
+        this.totalPages = (long) items.getTotalPages();
+        this.currentPage = (long) items.getNumber();
+    }
 }
