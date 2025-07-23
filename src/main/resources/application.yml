@@ -50,6 +50,9 @@ spring:
 kakao:
   rest-api-key: ${KAKAO_REST_API_KEY}
 
+gemini:
+  api-key: ${GEMINI_API_KEY}
+
 jwt:
   secret: ${JWT_SECRET_KEY}
   accessExpiration: 3600000
