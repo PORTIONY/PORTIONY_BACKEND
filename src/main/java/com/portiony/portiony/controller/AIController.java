@@ -5,11 +5,13 @@ import com.portiony.portiony.entity.Post;
 import com.portiony.portiony.entity.UserPreference;
 import com.portiony.portiony.repository.PostRepository;
 import com.portiony.portiony.repository.UserPreferenceRepository;
+import com.portiony.portiony.security.CustomUserDetails;
 import com.portiony.portiony.service.GeminiService;
 import com.portiony.portiony.util.UserPreferenceMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -24,22 +26,27 @@ public class AIController {
     private final UserPreferenceRepository userPreferenceRepository;
     private final PostRepository postRepository;
 
-    /**
-     * 페이지 1일 때만 Gemini 추천 (선호 정보 존재 + 전부 0 아님)
-     * 그 외에는 최신순 게시글 리턴
-     */
-    @GetMapping("/recommend/{userId}")
-    public ResponseEntity<?> recommend(@PathVariable Long userId,
-                                       @RequestParam(defaultValue = "1") int page) {
+    @GetMapping("/recommend")
+    public ResponseEntity<?> recommend(@RequestParam(defaultValue = "1") int page) {
         try {
+
+            Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+
+            if (!(principal instanceof CustomUserDetails userDetails)) {
+                return ResponseEntity.status(401).body("인증된 사용자가 아닙니다.");
+            }
+
+            Long userId = userDetails.getUser().getId();
+
             Optional<UserPreference> optionalPref = userPreferenceRepository.findByUserId(userId);
+
 
             boolean hasValidPreference = optionalPref.isPresent() &&
                     !(optionalPref.get().getMainCategory() == 0 &&
                             optionalPref.get().getPurchaseReason() == 0 &&
                             optionalPref.get().getSituation() == 0);
 
-            // ✅ page == 1 && 유효한 선호 정보 → Gemini 추천
+
             if (page == 1 && hasValidPreference) {
                 UserPreference pref = optionalPref.get();
 
@@ -60,7 +67,6 @@ public class AIController {
                 return ResponseEntity.ok(dtoList);
             }
 
-            // ✅ 최신순 페이지 조정: 추천 본 사용자는 page=2부터 최신순 1페이지
             int adjustedPage = (hasValidPreference && page >= 2) ? page - 1 : page;
 
             Pageable pageable = PageRequest.of(adjustedPage - 1, 10);
@@ -73,8 +79,8 @@ public class AIController {
             return ResponseEntity.ok(dtoList);
 
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().body("추천 실패: " + e.getMessage());
+            return ResponseEntity.internalServerError()
+                    .body("추천 실패: " + e.getClass().getSimpleName() + " - " + e.getMessage());
         }
     }
-
 }
