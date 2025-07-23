@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 public class ReviewHistoryResponse {
     private Long postId;
     private Long reviewId;
-    private boolean isWritten;
+    private Boolean isWritten;
     private String title;
     private String type; // "sale" or "purchase"
     private LocalDateTime transactionDate;

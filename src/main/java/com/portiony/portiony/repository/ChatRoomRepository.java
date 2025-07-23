@@ -3,6 +3,7 @@ package com.portiony.portiony.repository;
 import com.portiony.portiony.dto.user.PurchaseProjectionDto;
 import com.portiony.portiony.dto.user.SaleProjectionDto;
 import com.portiony.portiony.entity.ChatRoom;
+import com.portiony.portiony.entity.User;
 import com.portiony.portiony.entity.enums.PostStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -22,6 +23,7 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long>, JpaSp
     List<ChatRoom> findBySellerId(Long sellerId);
 
     Optional<ChatRoom> findByPostIdAndBuyerId(Long postId, Long buyerId);
+
     @Query("SELECT new com.portiony.portiony.dto.user.PurchaseProjectionDto(" +
            "cr.post.id, cr.post.title, cr.post.price," +
            "cr.post.user.region.city, cr.post.deadline, cr.post.createdAt," +

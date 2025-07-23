@@ -9,5 +9,5 @@ import java.util.List;
 public class PageResponse<T> {
     private long total;
     private int page;
-    private List<T> purchases;
+    private List<T> post;
 }
