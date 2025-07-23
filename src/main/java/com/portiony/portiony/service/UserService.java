@@ -10,15 +10,19 @@ import com.portiony.portiony.repository.*;
 import com.portiony.portiony.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -44,6 +48,9 @@ public class UserService {
     private final PostImageRepository postImageRepository;
     private final ReviewRepository reviewRepository;
     private final PostLikeRepository postLikeRepository;
+
+    @Value("${kakao.rest-api-key}")
+    private String kakaoClientId;
 
     // 공통 유저 생성 로직
     private User createUser(SignupBaseDto dto) {
@@ -120,6 +127,64 @@ public class UserService {
         return new LoginResponseDto(accessToken, refreshToken);
     }
 
+    public LoginResponseDto kakaoLogin(String code) {
+
+        // 1. access token 요청
+        String tokenUri = "https://kauth.kakao.com/oauth/token";
+
+        LinkedMultiValueMap<String, String> params = new LinkedMultiValueMap<>();
+        params.add("grant_type", "authorization_code");
+        params.add("client_id", kakaoClientId); // 카카오 REST API 키
+        params.add("redirect_uri", "http://localhost:8080/api/users/login/oauth/kakao/success");
+        params.add("code", code);
+
+        HttpHeaders tokenHeaders = new HttpHeaders();
+        tokenHeaders.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+
+        HttpEntity<LinkedMultiValueMap<String, String>> tokenRequest = new HttpEntity<>(params, tokenHeaders);
+        RestTemplate restTemplate = new RestTemplate();
+        ResponseEntity<Map> tokenResponse = restTemplate.postForEntity(tokenUri, tokenRequest, Map.class);
+
+        if (!tokenResponse.getStatusCode().is2xxSuccessful()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "카카오 토큰 요청 실패");
+        }
+
+        String accessToken = (String) tokenResponse.getBody().get("access_token");
+
+        // 2. 사용자 정보 요청
+        String userInfoUri = "https://kapi.kakao.com/v2/user/me";
+
+        HttpHeaders userInfoHeaders = new HttpHeaders();
+        userInfoHeaders.setBearerAuth(accessToken);
+
+        HttpEntity<Void> userInfoRequest = new HttpEntity<>(userInfoHeaders);
+        ResponseEntity<Map> userInfoResponse = restTemplate.exchange(userInfoUri, HttpMethod.GET, userInfoRequest, Map.class);
+
+        if (!userInfoResponse.getStatusCode().is2xxSuccessful()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "카카오 사용자 정보 요청 실패");
+        }
+
+        Map<String, Object> kakaoAccount = (Map<String, Object>) userInfoResponse.getBody().get("kakao_account");
+        String email = (String) kakaoAccount.get("email");
+
+        // 3. 기존 사용자 찾기
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "카카오 계정으로 가입된 사용자가 없습니다."));
+
+        // 4. JWT access + refresh token 발급
+        String jwtAccessToken = jwtUtil.generateAccessToken(user.getEmail());
+        String jwtRefreshToken = refreshTokenService.createRefreshToken(user.getEmail()).getToken();
+
+        return new LoginResponseDto(jwtAccessToken, jwtRefreshToken);
+    }
+
+    private HttpHeaders createHeaders() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+        return headers;
+    }
+
+
     public KakaoSignupResponseDto kakaoSignup(KakaoSignupRequestDto dto) {
         User user = createUser(dto);
         saveAgreementsAndPreferences(dto, user);
@@ -128,6 +193,16 @@ public class UserService {
         String refreshToken = refreshTokenService.createRefreshToken(user.getEmail()).getToken();
 
         return new KakaoSignupResponseDto(accessToken, refreshToken);
+    }
+
+    // 이메일 중복 확인
+    public boolean existsByEmail(String email) {
+        return userRepository.existsByEmail(email);
+    }
+
+    // 닉네임 중복 확인
+    public boolean existsByNickname(String nickname) {
+        return userRepository.existsByNickname(nickname);
     }
 
     // 프로필 조회 (이메일로찾기)

@@ -12,6 +12,7 @@ import com.portiony.portiony.repository.UserRepository;
 import com.portiony.portiony.service.UserService;
 import com.portiony.portiony.util.JwtUtil;
 import jakarta.validation.Valid;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -35,6 +36,20 @@ public class UserController {
     private final UserService userService;
     private final UserRepository userRepository;
     private final JwtUtil jwtUtil;
+
+    // 이메일 중복 체크
+    @GetMapping("/signup/check-email")
+    public ResponseEntity<Map<String, Boolean>> checkEmail(@RequestParam String email) {
+        boolean exists = userService.existsByEmail(email);
+        return ResponseEntity.ok(Collections.singletonMap("exists", exists));
+    }
+
+    // 닉네임 중복 체크
+    @GetMapping("/signup/check-nickname")
+    public ResponseEntity<Map<String, Boolean>> checkNickname(@RequestParam String nickname) {
+        boolean exists = userService.existsByNickname(nickname);
+        return ResponseEntity.ok(Collections.singletonMap("exists", exists));
+    }
 
     // 이메일로 userId 추출 메서드 (토큰에서 이메일 추출 후 DB 조회)
     public Long extractUserIdFromToken(String authHeader) {
@@ -64,13 +79,11 @@ public class UserController {
     // 카카오 로그인 성공 시 (OAuth2User 활용)
     @Hidden
     @GetMapping("/login/oauth/kakao/success")
-    public ResponseEntity<Map<String, Object>> kakaoLoginSuccess(@AuthenticationPrincipal OAuth2User oAuth2User) {
-        String token = (String) oAuth2User.getAttribute("accessToken");
-        String email = (String) oAuth2User.getAttribute("kakao_account.email");
+    public ResponseEntity<?> kakaoLoginSuccess(@RequestParam("code") String code) {
+        log.info("카카오 로그인 redirect code 수신: {}", code);
 
-        Map<String, Object> response = new HashMap<>();
-        response.put("accessToken", token);
-        response.put("email", email);
+        // access token 요청 → 사용자 정보 가져오기 → 로그인 처리
+        LoginResponseDto response = userService.kakaoLogin(code);
 
         return ResponseEntity.ok(response);
     }
