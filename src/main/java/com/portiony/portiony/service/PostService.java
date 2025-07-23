@@ -51,9 +51,11 @@ public class PostService {
     public PostWithCommentsResponse getPostWithComments(Long postId) {
         Post post = postRepository.findPostById(postId)
                 .orElseThrow(()->new IllegalArgumentException("게시글이 존재하지 않습니다."));
-        PostDetailResponse postDetailResponse = PostConverter.toPostDetailResponse(post);
+        Long likeCount = postLikeRepository.countByPostId(postId);
+        PostDetailResponse postDetailResponse = PostConverter.toPostDetailResponse(post, likeCount);
         Pageable pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt"));
         CommentListResponse commentListResponse = getCommentsByPostId(postId, pageable);
+
         return new PostWithCommentsResponse(postDetailResponse,commentListResponse);
     }
 

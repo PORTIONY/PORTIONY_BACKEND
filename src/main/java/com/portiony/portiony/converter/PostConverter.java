@@ -39,8 +39,7 @@ public class PostConverter {
      * @return PostDetailResponse DTO 객체
      */
     //TODO: 이미지 URL 리스트 추가 (S3연동 후)
-    //TODO: 찜 개수 추가
-    public static PostDetailResponse toPostDetailResponse(Post post) {
+    public static PostDetailResponse toPostDetailResponse(Post post, Long likeCount) {
         SellerDTO seller = SellerDTO.builder()
                 .sellerId(post.getUser().getId())
                 .nickname(post.getUser().getNickname())
@@ -63,7 +62,7 @@ public class PostConverter {
                 .deliveryMethod(post.getDeliveryMethod())
                 .isAgree(post.isAgree())
                 //.images()
-                //.likes()
+                .likes(likeCount)
                 .seller(seller)
                 .build();
     }
