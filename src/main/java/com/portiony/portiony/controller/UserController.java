@@ -170,7 +170,7 @@ public class UserController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "9") int size
     ) {
-        Long myId = extrctUserIdFromToken(authHeader);
+        Long myId = extractUserIdFromToken(authHeader);
         return userService.getReviewsByOther(myId, userId, writtenStatus, type, sort, starSort, page, size);
     }
 
@@ -199,7 +199,7 @@ public class UserController {
         log.info("리뷰 등록 요청: reviewId={}, star={}, choice={}, content={}",
                 reviewId, request.getStar(), request.getChoice(), request.getContent());
 
-        Long userId = extrctUserIdFromToken(authHeader);
+        Long userId = extractUserIdFromToken(authHeader);
         userService.registerReview(userId, reviewId, request);
         return ResponseEntity.ok(Collections.singletonMap("message", "후기가 등록되었습니다."));
     }
