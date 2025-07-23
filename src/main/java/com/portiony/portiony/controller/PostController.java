@@ -74,4 +74,19 @@ public class PostController {
             @AuthenticationPrincipal CustomUserDetails userDetails){
         return ResponseEntity.ok(postService.updateStatus(postId, userDetails.getUser().getId()));
     }
+
+    @PostMapping("/{postId}/like")
+    public ResponseEntity<LikePostResponse> likePost(
+            @PathVariable Long postId,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        return ResponseEntity.ok(postService.likePost(postId, userDetails));
+    }
+
+    @DeleteMapping("/{postId}/like")
+    public ResponseEntity<LikePostResponse> unlikePost(
+            @PathVariable Long postId,
+            @AuthenticationPrincipal CustomUserDetails userDetails){
+        return ResponseEntity.ok(postService.unlikePost(postId, userDetails));
+
+    }
 }

@@ -7,13 +7,10 @@ import com.portiony.portiony.dto.comment.CommentDTO;
 import com.portiony.portiony.dto.comment.CommentListResponse;
 import com.portiony.portiony.dto.comment.CreateCommentRequest;
 import com.portiony.portiony.dto.comment.CreateCommentResponse;
-import com.portiony.portiony.entity.Post;
-import com.portiony.portiony.entity.PostCategory;
-import com.portiony.portiony.entity.PostComment;
-import com.portiony.portiony.entity.User;
+import com.portiony.portiony.entity.*;
 import com.portiony.portiony.entity.enums.DeliveryMethod;
 import com.portiony.portiony.repository.CommentRepository;
-import com.portiony.portiony.repository.UserRepository;
+import com.portiony.portiony.repository.PostLikeRepository;
 import com.portiony.portiony.security.CustomUserDetails;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
@@ -34,7 +31,7 @@ import java.util.List;
 public class PostService {
     private final PostRepository postRepository;
     private final CommentRepository commentRepository;
-    private final UserRepository userRepository;
+    private final PostLikeRepository postLikeRepository;
 
     @Transactional
     public Long createPost(CustomUserDetails userDetails, CreatePostRequest request) {
@@ -116,5 +113,38 @@ public class PostService {
                 orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "게시글이 없거나 권한이 없습니다."));
         post.updateStatus();
         return new UpdatePostStatusResponse();
+    }
+
+    @Transactional
+    public LikePostResponse likePost(Long postId, CustomUserDetails userDetails) {
+        User user = userDetails.getUser();
+        Post post = postRepository.findPostById(postId)
+                .orElseThrow(() -> new EntityNotFoundException("게시글이 존재하지 않습니다."));
+
+        if (postLikeRepository.existsByPostAndUser(post, user)) {
+            throw new IllegalStateException("이미 찜한 게시글입니다.");
+        }
+
+        PostLike postLike = PostLike.builder()
+                .post(post)
+                .user(user)
+                .build();
+        postLikeRepository.save(postLike);
+
+        return new LikePostResponse(true);
+    }
+
+    @Transactional
+    public LikePostResponse unlikePost(Long postId, CustomUserDetails userDetails) {
+        User user = userDetails.getUser();
+        Post post = postRepository.findPostById(postId)
+                .orElseThrow(() -> new EntityNotFoundException("게시글이 존재하지 않습니다."));
+
+        PostLike like = postLikeRepository.findByPostAndUser(post, user)
+                .orElseThrow(() -> new IllegalStateException("찜하지 않은 게시글입니다."));
+
+        postLikeRepository.delete(like);
+
+        return new LikePostResponse(false);
     }
 }
