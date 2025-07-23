@@ -46,6 +46,8 @@ logging:
   level:
     org.springframework.web: DEBUG
     org.springframework.http.converter.json: DEBUG
+    org,hibernate.SQL: OFF
+    org.hibernate.type.descriptor.sql.BasicBinder: OFF
 
 #frontend:
 #  domain: ${FRONT_DOMAIN}

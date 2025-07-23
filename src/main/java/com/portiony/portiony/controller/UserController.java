@@ -147,7 +147,7 @@ public class UserController {
             @RequestHeader("Authorization") String authHeader,
             @RequestParam(required = false) String type,
             @RequestParam(required = false) String reviewSort,
-            @RequestParam(required = false) boolean writtenStatus,
+            @RequestParam(required = false) Boolean writtenStatus,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
@@ -160,7 +160,7 @@ public class UserController {
     public PageResponse<ReviewHistoryResponse> getReviewsByOther(
             @RequestHeader("Authorization") String authHeader,
             @PathVariable Long userId,
-            @RequestParam(required = false) boolean writtenStatus,
+            @RequestParam(required = false) Boolean writtenStatus,
             @RequestParam(required = false) String type,
             @RequestParam(required = false) String sort,
             @RequestParam(required = false) String starSort,

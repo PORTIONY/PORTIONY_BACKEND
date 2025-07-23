@@ -22,13 +22,12 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
             (:writtenStatus = true AND r.createdAt IS NOT NULL) OR
             (:writtenStatus = false AND r.createdAt IS NULL)
         )
-        ORDER BY r.createdAt DESC
     """)
-    Page<Review> findReviewsByMe(@Param("userId") Long userId, @Param("type") String type, @Param("writtenStatus") boolean writtenStatus, Pageable pageable);
+    Page<Review> findReviewsByMe(@Param("userId") Long userId, @Param("type") String type, @Param("writtenStatus") Boolean writtenStatus, Pageable pageable);
 
     @Query( value = """
         SELECT r FROM Review r JOIN r.chatRoom cr JOIN cr.post p
-        WHERE r.writer.id = :userId
+        WHERE r.target.id = :userId
         AND cr.sellerStatus = 'COMPLETED'
         AND cr.buyerStatus = 'COMPLETED'
         AND (
