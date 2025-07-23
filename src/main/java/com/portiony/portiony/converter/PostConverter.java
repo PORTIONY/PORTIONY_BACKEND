@@ -3,6 +3,7 @@ package com.portiony.portiony.converter;
 import com.portiony.portiony.dto.Post.CreatePostRequest;
 import com.portiony.portiony.dto.Post.PostDetailResponse;
 import com.portiony.portiony.dto.Post.SellerDTO;
+import com.portiony.portiony.dto.Post.UpdatePostRequest;
 import com.portiony.portiony.entity.Post;
 import com.portiony.portiony.entity.PostCategory;
 import com.portiony.portiony.entity.User;
@@ -38,7 +39,6 @@ public class PostConverter {
      * @return PostDetailResponse DTO 객체
      */
     //TODO: 이미지 URL 리스트 추가 (S3연동 후)
-    //TODO: 댓글 개수 및 목록 추가
     //TODO: 찜 개수 추가
     public static PostDetailResponse toPostDetailResponse(Post post) {
         SellerDTO seller = SellerDTO.builder()
@@ -64,9 +64,19 @@ public class PostConverter {
                 .isAgree(post.isAgree())
                 //.images()
                 //.likes()
-                //.commentCount()
                 .seller(seller)
                 .build();
     }
 
+    public static void update(Post post, UpdatePostRequest request, DeliveryMethod method){
+        post.update(
+                request.getTitle(),
+                request.getDescription(),
+                request.getCapacity(),
+                request.getPrice(),
+                request.getUnit(),
+                request.getDeadline(),
+                method
+        );
+    }
 }
