@@ -19,7 +19,7 @@ spring:
         format_sql: false
         use_sql_comments: false
         hbm2ddl:
-          auto: create
+          auto: update
     database: mysql
   profiles:
     include:
