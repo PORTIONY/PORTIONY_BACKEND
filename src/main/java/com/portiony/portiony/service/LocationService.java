@@ -45,6 +45,11 @@ public class LocationService {
         String subregionName = info.get("region_2depth_name").asText();  // ex: 강남구
         String dongName = info.get("region_3depth_name").asText();       // ex: 역삼동
 
+        // 로그 추가
+        System.out.println(">> regionName = " + regionName);
+        System.out.println(">> subregionName = " + subregionName);
+        System.out.println(">> dongName = " + dongName);
+
         Region region = regionRepository.findByCity(regionName)
                 .orElseThrow(() -> new IllegalArgumentException("해당 region 없음"));
 
