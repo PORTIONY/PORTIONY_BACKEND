@@ -32,7 +32,7 @@ spring:
         registration:
           kakao:
             client-id: ${KAKAO_REST_API_KEY}
-            redirect-uri: http://localhost:8080/api/users/login/oauth/kakao/callback
+            redirect-uri: http://localhost:8080/api/users/loQgin/oauth/kakao/callback
             authorization-grant-type: authorization_code
             client-name: Kakao
             scope: profile_nickname, account_email
@@ -43,12 +43,11 @@ spring:
             user-info-uri: https://kapi.kakao.com/v2/user/me
             user-name-attribute: id
 
-#frontend:
-#  domain: ${FRONT_DOMAIN}
-#
-
 kakao:
   rest-api-key: ${KAKAO_REST_API_KEY}
+
+gemini:
+  api-key: ${GEMINI_API_KEY}
 
 jwt:
   secret: ${JWT_SECRET_KEY}
@@ -62,7 +61,7 @@ logging:
     org.hibernate.SQL: OFF
     org.hibernate.type.descriptor.sql.BasicBinder: OFF
 
-#frontend:
-#  domain: ${FRONT_DOMAIN}
+frontend:
+  domain: ${FRONT_DOMAIN}
 #redis:
 #  domain: ${REDIS_DOMAIN}

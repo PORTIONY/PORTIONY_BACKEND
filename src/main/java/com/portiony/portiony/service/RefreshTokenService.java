@@ -26,7 +26,7 @@ public class RefreshTokenService {
 
         // 기존 토큰 삭제 + 즉시 반영
         refreshTokenRepository.deleteByUser(user);
-        refreshTokenRepository.flush();
+        refreshTokenRepository.flush(); // <-- 바로 DB에 반영되도록 추가
 
         RefreshToken refreshToken = RefreshToken.builder()
                 .user(user)

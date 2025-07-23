@@ -10,6 +10,7 @@ import com.portiony.portiony.repository.*;
 import com.portiony.portiony.security.CustomUserDetails;
 import com.portiony.portiony.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.*;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -18,7 +19,16 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -44,6 +54,9 @@ public class UserService {
     private final PostImageRepository postImageRepository;
     private final ReviewRepository reviewRepository;
     private final PostLikeRepository postLikeRepository;
+
+    @Value("${kakao.rest-api-key}")
+    private String kakaoClientId;
 
     // 공통 유저 생성 로직
     private User createUser(SignupBaseDto dto) {
@@ -120,6 +133,90 @@ public class UserService {
         return new LoginResponseDto(accessToken, refreshToken);
     }
 
+    public Object kakaoLogin(String code) {
+
+        // 1. access token 요청
+        String tokenUri = "https://kauth.kakao.com/oauth/token";
+
+        LinkedMultiValueMap<String, String> params = new LinkedMultiValueMap<>();
+        params.add("grant_type", "authorization_code");
+        params.add("client_id", kakaoClientId);
+        params.add("redirect_uri", "http://localhost:8080/api/users/login/oauth/kakao/success");
+        params.add("code", code);
+
+        HttpHeaders tokenHeaders = new HttpHeaders();
+        tokenHeaders.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+
+        HttpEntity<LinkedMultiValueMap<String, String>> tokenRequest = new HttpEntity<>(params, tokenHeaders);
+        RestTemplate restTemplate = new RestTemplate();
+        ResponseEntity<Map<String, Object>> tokenResponse = restTemplate.postForEntity(
+                tokenUri, tokenRequest, (Class<Map<String, Object>>) (Class<?>) Map.class
+        );
+
+        if (!tokenResponse.getStatusCode().is2xxSuccessful()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "카카오 토큰 요청 실패");
+        }
+
+        String accessToken = (String) tokenResponse.getBody().get("access_token");
+
+        // 2. 사용자 정보 요청
+        String userInfoUri = "https://kapi.kakao.com/v2/user/me";
+
+        HttpHeaders userInfoHeaders = new HttpHeaders();
+        userInfoHeaders.setBearerAuth(accessToken);
+
+        HttpEntity<Void> userInfoRequest = new HttpEntity<>(userInfoHeaders);
+        ResponseEntity<Map<String, Object>> userInfoResponse = restTemplate.exchange(
+                userInfoUri, HttpMethod.GET, userInfoRequest, (Class<Map<String, Object>>) (Class<?>) Map.class
+        );
+
+        if (!userInfoResponse.getStatusCode().is2xxSuccessful()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "카카오 사용자 정보 요청 실패");
+        }
+
+        Map<String, Object> kakaoAccount = (Map<String, Object>) userInfoResponse.getBody().get("kakao_account");
+        Map<String, Object> profile = (Map<String, Object>) kakaoAccount.get("profile");
+
+        String email = (String) kakaoAccount.get("email");
+        if (email == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "카카오 계정에 이메일 정보가 없습니다.");
+        }
+
+        Optional<User> userOptional = userRepository.findByEmail(email);
+
+        if (userOptional.isPresent()) {
+            // 기존 사용자: 토큰 발급 후 로그인 완료
+            User user = userOptional.get();
+            String jwtAccessToken = jwtUtil.generateAccessToken(user.getEmail());
+            String jwtRefreshToken = refreshTokenService.createRefreshToken(user.getEmail()).getToken();
+            return new LoginResponseDto(jwtAccessToken, jwtRefreshToken);
+        } else {
+            // 신규 사용자: 회원가입 요청용 정보 반환
+            String nickname = (String) profile.get("nickname");
+            String profileImage = (String) profile.get("profile_image_url");
+
+            return new KakaoSignupRequestDto(
+                    email,
+                    nickname,
+                    profileImage,
+                    null, // regionId
+                    null, // subregionId
+                    null, // dongId
+                    null, // agreementIds
+                    null, // mainCategory
+                    null, // purchaseReason
+                    null  // situation
+            );
+        }
+    }
+
+    private HttpHeaders createHeaders() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+        return headers;
+    }
+
+
     public KakaoSignupResponseDto kakaoSignup(KakaoSignupRequestDto dto) {
         User user = createUser(dto);
         saveAgreementsAndPreferences(dto, user);
@@ -129,6 +226,17 @@ public class UserService {
 
         return new KakaoSignupResponseDto(accessToken, refreshToken);
     }
+
+    // 이메일 중복 확인
+    public boolean existsByEmail(String email) {
+        return userRepository.existsByEmail(email);
+    }
+
+    // 닉네임 중복 확인
+    public boolean existsByNickname(String nickname) {
+        return userRepository.existsByNickname(nickname);
+    }
+
 
     // 기본 정렬 (최신순/오래된순, 가격낮은순/가격높은순)
     // 정렬 병렬 적용.

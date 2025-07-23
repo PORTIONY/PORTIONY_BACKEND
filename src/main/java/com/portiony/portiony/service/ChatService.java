@@ -239,11 +239,13 @@ public class ChatService {
                             ? room.getBuyer()
                             : room.getSeller();
 
+                    boolean isSeller = room.getSeller().getId().equals(userId);
+
                     //post 이미지 조회 > 없으면 null
                     PostImage postImageUrl = postImageRepository
                             .findFirstImageUrlByPostId(room.getPost().getId());
                     String imageUrl = postImageUrl != null ? postImageUrl.getImageUrl() : null;
-                    return ChatConverter.toChatRoomPreviewDTO(room, lastMessage, partner, imageUrl);
+                    return ChatConverter.toChatRoomPreviewDTO(room, lastMessage, partner, imageUrl, isSeller);
                 })
                 .sorted((a, b) -> {
                     if (a.getLastMessageTime() == null && b.getLastMessageTime() == null) {

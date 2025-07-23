@@ -13,6 +13,7 @@ import com.portiony.portiony.security.CustomUserDetails;
 import com.portiony.portiony.service.UserService;
 import com.portiony.portiony.util.JwtUtil;
 import jakarta.validation.Valid;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -37,6 +38,20 @@ public class UserController {
     private final UserRepository userRepository;
     private final JwtUtil jwtUtil;
 
+    // 이메일 중복 체크
+    @GetMapping("/signup/check-email")
+    public ResponseEntity<Map<String, Boolean>> checkEmail(@RequestParam String email) {
+        boolean exists = userService.existsByEmail(email);
+        return ResponseEntity.ok(Collections.singletonMap("exists", exists));
+    }
+
+    // 닉네임 중복 체크
+    @GetMapping("/signup/check-nickname")
+    public ResponseEntity<Map<String, Boolean>> checkNickname(@RequestParam String nickname) {
+        boolean exists = userService.existsByNickname(nickname);
+        return ResponseEntity.ok(Collections.singletonMap("exists", exists));
+    }
+
     // 회원가입 (기존 REST)
     @PostMapping("/signup")
     public ResponseEntity<String> signup(@Valid @RequestBody SignupRequestDto dto) {
@@ -54,18 +69,21 @@ public class UserController {
     // 카카오 로그인 성공 시 (OAuth2User 활용)
     @Hidden
     @GetMapping("/login/oauth/kakao/success")
-    public ResponseEntity<Map<String, Object>> kakaoLoginSuccess(@AuthenticationPrincipal OAuth2User oAuth2User) {
-        String token = (String) oAuth2User.getAttribute("accessToken");
-        String email = (String) oAuth2User.getAttribute("kakao_account.email");
+    public ResponseEntity<?> kakaoLoginSuccess(@RequestParam("code") String code) {
+        log.info("카카오 로그인 redirect code 수신: {}", code);
 
-        Map<String, Object> response = new HashMap<>();
-        response.put("accessToken", token);
-        response.put("email", email);
+        Object result = userService.kakaoLogin(code);
 
-        return ResponseEntity.ok(response);
+        if (result instanceof LoginResponseDto loginResponse) {
+            return ResponseEntity.ok(loginResponse); // 기존 회원 → 로그인완료
+        } else if (result instanceof KakaoSignupRequestDto signupInfo) {
+            return ResponseEntity.status(HttpStatus.OK).body(signupInfo); // 신규 회원 → 가입절차로 이동
+        } else {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("카카오 로그인 처리 중 오류가 발생했습니다.");
+        }
     }
 
-    // 카카오 신규회원 가입
+    // 카카오 신규로그인 경우 회원가입완료
     @Hidden
     @PostMapping("/login/oauth/kakao/signup")
     public ResponseEntity<String> kakaoSignup(@Valid @RequestBody KakaoSignupRequestDto dto) {

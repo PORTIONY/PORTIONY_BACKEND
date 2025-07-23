@@ -49,7 +49,8 @@ public class ChatConverter {
             ChatRoom room,
             ChatMessage lastMessage,
             User partner,
-            String postImageUrl
+            String postImageUrl,
+            Boolean isSeller
     ) {
         Post post = room.getPost();
 
@@ -75,6 +76,7 @@ public class ChatConverter {
                         .sellerStatus(room.getSellerStatus())
                         .buyerStatus(room.getBuyerStatus())
                         .build())
+                .isSeller(isSeller)
                 .build();
     }
 }

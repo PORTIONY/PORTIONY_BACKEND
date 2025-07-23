@@ -37,6 +37,14 @@ jobs:
                   value: ${{ secrets.DEV_DB_PASSWORD }}
                 - name: DEV_DB_URL
                   value: ${{ secrets.DEV_DB_URL }}
+                - name: GEMINI_API_KEY
+                  value: ${{ secrets.GEMINI_API_KEY }}
+                - name: JWT_SECRET_KEY
+                  value: ${{ secrets.JWT_SECRET_KEY }}
+                - name: KAKAO_REST_API_KEY
+                  value: ${{ secrets.KAKAO_REST_API_KEY }}
+                - name: KAKAO_REST_API_KEY
+                  value: ${{ secrets.FRONT_DOMAIN }}
               buildenv: []
             context:
               git:
