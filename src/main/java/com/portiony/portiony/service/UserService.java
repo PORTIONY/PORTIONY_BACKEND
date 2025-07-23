@@ -7,9 +7,9 @@ import com.portiony.portiony.entity.*;
 import com.portiony.portiony.entity.enums.PostStatus;
 import com.portiony.portiony.entity.enums.UserStatus;
 import com.portiony.portiony.repository.*;
+import com.portiony.portiony.security.CustomUserDetails;
 import com.portiony.portiony.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.*;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -130,12 +130,6 @@ public class UserService {
         return new KakaoSignupResponseDto(accessToken, refreshToken);
     }
 
-    // 프로필 조회 (이메일로찾기)
-    private User findUserById(Long userId) {
-        return userRepository.findById(userId).
-                orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,"사용자를 찾을 수 없습니다."));
-    }
-
     // 기본 정렬 (최신순/오래된순, 가격낮은순/가격높은순)
     // 정렬 병렬 적용.
     private Sort getSort(String dateSort, String priceSort) {
@@ -162,9 +156,9 @@ public class UserService {
         Sort result = Sort.unsorted();
 
         if ("recent".equalsIgnoreCase(reviewSort)) {
-            result = Sort.by(Sort.Direction.DESC, "chatRoom.finishDate");
+            result = Sort.by(Sort.Direction.DESC, "createdAt");
         } else if ("oldest".equalsIgnoreCase(reviewSort)) {
-            result = Sort.by(Sort.Direction.ASC, "chatRoom.finishDate");
+            result = Sort.by(Sort.Direction.ASC, "createdAt");
         }
 
         if("high".equalsIgnoreCase(starSort)) {
@@ -178,8 +172,8 @@ public class UserService {
 
     // 찜 정렬
     // 정렬 단일 적용
-    private Sort getWishlistSort(String postLikert) {
-        switch (postLikert) {
+    private Sort getWishlistSort(String postLikeSort) {
+        switch (postLikeSort) {
             // 최신 찜순
             case "recent" :
                 return Sort.by(Sort.Direction.DESC, "createdAt");
@@ -203,11 +197,9 @@ public class UserService {
     }
 
     // 프로필 조회
-    public UserProfileResponse getUserProfile(Long userId) {
-        User user = findUserById(userId);
-        // TODO: userId 기반 유저 조회
-        // TODO: 구매이력, 판매이력 수 계산 (주문/게시글 도메인 연동)
-        // TODO: 긍정후기비율 계산 (리뷰 도메인 연동)
+    public UserProfileResponse getUserProfile(CustomUserDetails userDetails) {
+
+        User user = userDetails.getUser();
 
         return UserProfileResponse.builder()
                 .userId(user.getId())
@@ -221,8 +213,8 @@ public class UserService {
     }
 
     // 프로필 편집 조회
-    public EditProfileViewResponse editProfileView(Long userId) {
-        User user = findUserById(userId);
+    public EditProfileViewResponse editProfileView(CustomUserDetails userDetails) {
+        User  user = userDetails.getUser();
 
         return EditProfileViewResponse.builder()
                 .userId(user.getId())
@@ -234,10 +226,10 @@ public class UserService {
 
     // 프로필 편집
     @Transactional
-    public void editProfile(Long userId, EditProfileRequest request) {
-        User user = findUserById(userId);
+    public void editProfile(CustomUserDetails userDetails, EditProfileRequest request) {
 
-        //닉네임 수정하기 ("/signup/check-nickname" api 사용)
+        User  user = userDetails.getUser();
+
         //한번 더 검증하기
         if (request.getNickname() != null && !request.getNickname().equals(user.getNickname())) {
             if (userRepository.existsByNickname(request.getNickname())) {
@@ -265,8 +257,9 @@ public class UserService {
 
     // 회원 탈퇴
     @Transactional
-    public void deleteUser(Long userId, DeleteUserRequest request) {
-        User user = findUserById(userId);
+    public void deleteUser(CustomUserDetails userDetails, DeleteUserRequest request) {
+
+        User  user = userDetails.getUser();
 
         if(!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"비밀번호가 일치하지 않습니다.");
@@ -276,11 +269,13 @@ public class UserService {
     }
 
     // 내 구매 내역 조회
-    public PageResponse<PurchaseHistoryResponse> getMyPurchases(Long userId, String dateSort, String priceSort, PostStatus status, int page, int size) {
+    public PageResponse<PurchaseHistoryResponse> getMyPurchases(CustomUserDetails userDetails, String dateSort, String priceSort, PostStatus status, int page, int size) {
+
+        User  user = userDetails.getUser();
 
         Pageable pageable = PageRequest.of(page - 1, size, getSort(dateSort, priceSort));
 
-        Page<PurchaseProjectionDto> purchases = chatRoomRepository.findPurchasesWithPost(userId, status, pageable);
+        Page<PurchaseProjectionDto> purchases = chatRoomRepository.findPurchasesWithPost(user.getId(), status, pageable);
 
         List<PurchaseHistoryResponse> content = purchases.getContent().stream()
                 .map(dto -> {
@@ -305,11 +300,12 @@ public class UserService {
     }
 
     // 판매 내역 조회 (특정 유저)
-    public PageResponse<SaleHistoryResponse> getMySales(Long myId, Long userId, String dateSort, String priceSort, PostStatus status, int page, int size) {
+    public PageResponse<SaleHistoryResponse> getMySales(CustomUserDetails userDetails, Long userId, String dateSort, String priceSort, PostStatus status, int page, int size) {
+        User user = userDetails.getUser();
 
         Pageable pageable = PageRequest.of(page - 1, size, getSort(dateSort, priceSort));
 
-        Page<SaleProjectionDto> sales = chatRoomRepository.findSalesWithPost(userId, status, pageable);
+        Page<SaleProjectionDto> sales = chatRoomRepository.findSalesWithPost(user.getId(), status, pageable);
 
         List<SaleHistoryResponse> content = sales.getContent().stream()
                 .map(dto -> {
@@ -334,24 +330,52 @@ public class UserService {
     }
 
     // 내가 쓴 후기 조회
-    public PageResponse<ReviewHistoryResponse> getReviewsByMe(Long userId, String type, String reviewSort, boolean writtenStatus, int page, int size) {
+    public PageResponse<ReviewHistoryResponse> getReviewsByMe(CustomUserDetails userDetails, String type, String reviewSort, Boolean writtenStatus, int page, int size) {
 
-        Sort sortOption = getSort(reviewSort, type);
+        User user = userDetails.getUser();
+
+        Sort sortOption = getReviewSort(reviewSort, type);
         Pageable pageable = PageRequest.of(page -1, size, sortOption);
 
-        Page<Review> reviews = reviewRepository.findReviewsByMe(userId, type, writtenStatus, pageable);
+        Page<Review> allReviews = reviewRepository.findAllReviewsByMe(user.getId(), pageable);
 
-        List<ReviewHistoryResponse> content = reviews.getContent().stream()
+        List<ReviewHistoryResponse> content = allReviews.getContent().stream()
+                .filter(review -> {
+                    // 후기 작성 여부 필터
+                    if (writtenStatus != null) {
+                        if (writtenStatus && review.getStar() == 0.0) return false;
+                        if (!writtenStatus && review.getStar() != 0.0) return false;
+                    }
+
+                    // 구매/판매 타입 필터
+                    ChatRoom cr = review.getChatRoom();
+                    if (type != null) {
+                        if (type.equals("buyer") && !cr.getBuyer().getId().equals(user.getId())) return false;
+                        if (type.equals("seller") && !cr.getSeller().getId().equals(user.getId())) return false;
+                    }
+
+                    return true;
+                })
+
                 .map(review -> {
                     ChatRoom chatRoom = review.getChatRoom();
                     Post post = chatRoom.getPost();
+
+                    String reviewType;
+                    if (chatRoom.getSeller() != null && chatRoom.getBuyer().getId().equals(user.getId())) {
+                        reviewType = "purchase";
+                    } else if (chatRoom.getBuyer() != null && chatRoom.getSeller().getId().equals(user.getId())) {
+                        reviewType = "sale";
+                    } else {
+                        reviewType = "unknown"; // 예외
+                    }
 
                     return ReviewHistoryResponse.builder()
                             .postId(post.getId())
                             .reviewId(review.getId())
                             .isWritten(review.getStar() != 0.0)
                             .title(post.getTitle())
-                            .type(chatRoom.getSeller().getId().equals(userId) ? "sale" : "purchase")
+                            .type(reviewType)
                             .transactionDate(chatRoom.getFinishDate())
                             .choice(review.getChoice())
                             .content(review.getContent())
@@ -359,28 +383,39 @@ public class UserService {
                 })
                 .collect(Collectors.toList());
 
-        return new PageResponse<>(reviews.getTotalElements(), reviews.getNumber() + 1, content);
+        return new PageResponse<>(allReviews.getTotalElements(), allReviews.getNumber() + 1, content);
     }
 
     // 받은 후기 조회
-    public PageResponse<ReviewHistoryResponse> getReviewsByOther(Long myId, Long userId, boolean writtenStatus, String type, String reviewSort, String starSort, int page, int size) {
+    public PageResponse<ReviewHistoryResponse> getReviewsByOther(CustomUserDetails userDetails, Long userId, String type, String reviewSort, String starSort, int page, int size) {
+
+        User user = userDetails.getUser();
 
         Sort sortOption = getReviewSort(starSort, reviewSort);
         Pageable pageable = PageRequest.of(page - 1, size, sortOption);
 
-        Page<Review> reviews = reviewRepository.findReviewsByOther(userId, writtenStatus, type, pageable);
+        Page<Review> reviews = reviewRepository.findReviewsByOther(user.getId(), type, pageable);
 
         List<ReviewHistoryResponse> content = reviews.getContent().stream()
                 .map(review -> {
                     ChatRoom chatRoom = review.getChatRoom();
                     Post post = chatRoom.getPost();
 
+                    String reviewType;
+                    if (chatRoom.getSeller() != null && chatRoom.getBuyer().getId().equals(user.getId())) {
+                        reviewType = "purchase";
+                    } else if (chatRoom.getBuyer() != null && chatRoom.getSeller().getId().equals(user.getId())) {
+                        reviewType = "ssale";
+                    } else {
+                        reviewType = "unknown"; // 예외
+                    }
+
                     return ReviewHistoryResponse.builder()
                             .postId(post.getId())
                             .reviewId(review.getId())
                             .isWritten(review.getStar() != 0.0)
                             .title(post.getTitle())
-                            .type(chatRoom.getSeller().getId().equals(userId) ? "sale" : "purchase")
+                            .type(reviewType)
                             .transactionDate(chatRoom.getFinishDate())
                             .choice(review.getChoice())
                             .content(review.getContent())
@@ -392,11 +427,13 @@ public class UserService {
     }
 
     // 찜 내역 조회
-    public PageResponse<PostLikeHistoryResponse> getWishlist(Long userId, String postLikeSort, PostStatus status, int page, int size) {
+    public PageResponse<PostLikeHistoryResponse> getWishlist(CustomUserDetails userDetails, String postLikeSort, PostStatus status, int page, int size) {
+
+        User user = userDetails.getUser();
 
         Pageable pageable = PageRequest.of(page - 1, size, getWishlistSort(postLikeSort));
 
-        Page<PostLikeProjectionDto> likes = postLikeRepository.findPostLikeWithRegion(userId, status, pageable);
+        Page<PostLikeProjectionDto> likes = postLikeRepository.findPostLikeWithRegion(user.getId(), status, pageable);
 
         List<PostLikeHistoryResponse> content = likes.getContent().stream()
             .map(dto -> {
@@ -421,13 +458,15 @@ public class UserService {
 
     // 리뷰 등록
     @Transactional
-    public void registerReview(Long userId, Long reviewId, ReviewRegisterRequest request) {
+    public void registerReview(CustomUserDetails userDetails, Long reviewId, ReviewRegisterRequest request) {
+
+        User user = userDetails.getUser();
 
         Review review = reviewRepository.findById(reviewId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "해당 리뷰가 존재하지 않습니다."));
 
-        if (!review.getWriter().getId().equals(userId) &&
-                !review.getTarget().getId().equals(userId)) {
+        if (!review.getWriter().getId().equals(user.getId()) &&
+                !review.getTarget().getId().equals(user.getId())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "리뷰 작성 권한이 없습니다.");
         }
 
@@ -451,7 +490,9 @@ public class UserService {
 
     // 리뷰 삭제
     @Transactional
-    public void deleteReview(Long userId, Long reviewId) {
+    public void deleteReview(CustomUserDetails userDetails, Long reviewId) {
+
+        User user = userDetails.getUser();
 
         Review review = reviewRepository.findById(reviewId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "해당 리뷰가 존재하지 않습니다."));

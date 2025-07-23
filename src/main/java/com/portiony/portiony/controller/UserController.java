@@ -9,6 +9,7 @@ import com.portiony.portiony.dto.user.*;
 import com.portiony.portiony.entity.User;
 import com.portiony.portiony.entity.enums.PostStatus;
 import com.portiony.portiony.repository.UserRepository;
+import com.portiony.portiony.security.CustomUserDetails;
 import com.portiony.portiony.service.UserService;
 import com.portiony.portiony.util.JwtUtil;
 import jakarta.validation.Valid;
@@ -35,17 +36,6 @@ public class UserController {
     private final UserService userService;
     private final UserRepository userRepository;
     private final JwtUtil jwtUtil;
-
-    // 이메일로 userId 추출 메서드 (토큰에서 이메일 추출 후 DB 조회)
-    public Long extractUserIdFromToken(String authHeader) {
-        String token = authHeader.replace("Bearer ", "");
-        String email = jwtUtil.extractEmail(token);
-
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "사용자를 찾을 수 없습니다."));
-
-        return user.getId();
-    }
 
     // 회원가입 (기존 REST)
     @PostMapping("/signup")
@@ -85,54 +75,49 @@ public class UserController {
 
     // 사용자 프로필 조회
     @GetMapping("/")
-    public UserProfileResponse getUserProfile(@RequestHeader("Authorization") String authHeader) {
-        Long userId = extractUserIdFromToken(authHeader);
-        return userService.getUserProfile(userId);
+    public UserProfileResponse getUserProfile(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        return userService.getUserProfile(userDetails);
     }
 
     // 내 프로필 수정 화면 조회
     @GetMapping("/me")
-    public EditProfileViewResponse getMyProfileForEdit(@RequestHeader("Authorization") String authHeader) {
-        Long userId = extractUserIdFromToken(authHeader);
-        return userService.editProfileView(userId);
+    public EditProfileViewResponse getMyProfileForEdit(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        return userService.editProfileView(userDetails);
     }
 
     // 내 프로필 수정
     @PatchMapping("/me")
-    public ResponseEntity<Map<String, String>> editProfile(@RequestHeader("Authorization") String authHeader,
-                                                           @RequestBody EditProfileRequest request) {
-        Long userId = extractUserIdFromToken(authHeader);
-        userService.editProfile(userId, request);
+    public ResponseEntity<Map<String, String>> editProfile(
+            @AuthenticationPrincipal CustomUserDetails userDetails, @RequestBody EditProfileRequest request) {
+        userService.editProfile(userDetails, request);
         return ResponseEntity.ok(Collections.singletonMap("message", "프로필이 수정되었습니다."));
     }
 
     // 회원 탈퇴
     @DeleteMapping("/me")
-    public ResponseEntity<Map<String, String>> deleteUser(@RequestHeader("Authorization") String authHeader,
-                                                          @RequestBody DeleteUserRequest request) {
-        Long userId = extractUserIdFromToken(authHeader);
-        userService.deleteUser(userId, request);
+    public ResponseEntity<Map<String, String>> deleteUser(
+            @AuthenticationPrincipal CustomUserDetails userDetails, @RequestBody DeleteUserRequest request) {
+        userService.deleteUser(userDetails, request);
         return ResponseEntity.ok(Collections.singletonMap("message", "탈퇴가 완료되었습니다."));
     }
 
     // 내 구매 내역 조회
     @GetMapping("/me/purchases")
     public PageResponse<PurchaseHistoryResponse> getMyPurchases(
-            @RequestHeader("Authorization") String authHeader,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam(defaultValue = "recent") String dateSort,
             @RequestParam(required = false) String priceSort,
             @RequestParam(required = false) PostStatus status,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "12") int size
     ) {
-        Long userId = extractUserIdFromToken(authHeader);
-        return userService.getMyPurchases(userId, dateSort, priceSort, status, page, size);
+        return userService.getMyPurchases(userDetails, dateSort, priceSort, status, page, size);
     }
 
     // 판매 내역 조회 (특정 유저)
     @GetMapping("/{userId}/sales")
     public PageResponse<SaleHistoryResponse> getSales(
-            @RequestHeader("Authorization") String authHeader,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long userId,
             @RequestParam(required = false) String dateSort,
             @RequestParam(required = false) String priceSort,
@@ -140,57 +125,52 @@ public class UserController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "12") int size
     ) {
-        Long myId = extractUserIdFromToken(authHeader);
-        return userService.getMySales(myId, userId, dateSort, priceSort, status, page, size);
+        return userService.getMySales(userDetails, userId, dateSort, priceSort, status, page, size);
     }
 
     // 내가 작성한 후기 조회
     @GetMapping("/me/reviews")
     public PageResponse<ReviewHistoryResponse> getReviewsByMe(
-            @RequestHeader("Authorization") String authHeader,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam(required = false) String type,
-            @RequestParam(required = false) String reviewSort,
+            @RequestParam(required = false, defaultValue = "recent") String reviewSort,
             @RequestParam(required = false) Boolean writtenStatus,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
-        Long userId = extractUserIdFromToken(authHeader);
-        return userService.getReviewsByMe(userId, type, reviewSort, writtenStatus, page, size);
+        return userService.getReviewsByMe(userDetails, type, reviewSort, writtenStatus, page, size);
     }
 
     // 받은 후기 조회
     @GetMapping("/reviews/{userId}")
     public PageResponse<ReviewHistoryResponse> getReviewsByOther(
-            @RequestHeader("Authorization") String authHeader,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long userId,
-            @RequestParam(required = false) Boolean writtenStatus,
             @RequestParam(required = false) String type,
-            @RequestParam(required = false) String sort,
-            @RequestParam(required = false) String starSort,
+            @RequestParam(required = false, defaultValue = "recent") String sort,
+            @RequestParam(required = false, defaultValue = "high") String starSort,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "9") int size
     ) {
-        Long myId = extractUserIdFromToken(authHeader);
-        return userService.getReviewsByOther(myId, userId, writtenStatus, type, sort, starSort, page, size);
+        return userService.getReviewsByOther(userDetails, userId, type, sort, starSort, page, size);
     }
 
     // 찜 목록 조회
     @GetMapping("/me/wishlist")
     public PageResponse<PostLikeHistoryResponse> getMyWishlist(
-            @RequestHeader("Authorization") String authHeader,
-            @RequestParam(required = false) String sort,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestParam(required = false, defaultValue = "recent") String sort,
             @RequestParam(required = false) PostStatus status,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "12") int size
     ) {
-        Long userId = extractUserIdFromToken(authHeader);
-        return userService.getWishlist(userId, sort, status, page, size);
+        return userService.getWishlist(userDetails, sort, status, page, size);
     }
 
     // 후기 등록
     @PostMapping("/me/reviews/{reviewId}")
     public ResponseEntity<Map<String, String>> registerReview(
-            @RequestHeader("Authorization") String authHeader,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long reviewId,
             @RequestBody @Valid ReviewRegisterRequest request
     ) {
@@ -199,19 +179,18 @@ public class UserController {
         log.info("리뷰 등록 요청: reviewId={}, star={}, choice={}, content={}",
                 reviewId, request.getStar(), request.getChoice(), request.getContent());
 
-        Long userId = extractUserIdFromToken(authHeader);
-        userService.registerReview(userId, reviewId, request);
+        userService.registerReview(userDetails, reviewId, request);
         return ResponseEntity.ok(Collections.singletonMap("message", "후기가 등록되었습니다."));
     }
 
     // 후기 삭제
     @DeleteMapping("/me/reviews/{reviewId}")
     public ResponseEntity<Map<String, String>> deleteReview(
-            @RequestHeader("Authorization") String authHeader,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long reviewId
     ) {
-        Long userId = extractUserIdFromToken(authHeader);
-        userService.deleteReview(userId, reviewId);
+        //Long userId = extractUserIdFromToken(authHeader);
+        userService.deleteReview(userDetails, reviewId);
         return ResponseEntity.ok(Collections.singletonMap("message", "후기가 삭제되었습니다."));
     }
 
