@@ -8,15 +8,15 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 
 public class ChatRequestDTO {
-    //채팅방 생성 > 채팅하기 버튼 눌렀을 때
-    @Getter
-    public static class CreateRoomRqDTO{
-        @NotNull
-        private Long postId;
-
-        @NotNull
-        private Long buyerId;
-    }
+    //채팅방 생성 > 채팅하기 버튼 눌렀을 때 > path변수로 변경
+//    @Getter
+//    public static class CreateRoomRqDTO{
+//        @NotNull
+//        private Long postId;
+//
+////        @NotNull
+////        private Long buyerId;
+//    }
 
     //웹 소켓에 이미지 전송 전 rest api로 이미지 먼저 저장
     @Getter

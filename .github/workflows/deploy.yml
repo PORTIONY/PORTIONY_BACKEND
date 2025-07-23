@@ -43,7 +43,7 @@ jobs:
                   value: ${{ secrets.JWT_SECRET_KEY }}
                 - name: KAKAO_REST_API_KEY
                   value: ${{ secrets.KAKAO_REST_API_KEY }}
-                - name: KAKAO_REST_API_KEY
+                - name: FRONT_DOMAIN
                   value: ${{ secrets.FRONT_DOMAIN }}
               buildenv: []
             context:
