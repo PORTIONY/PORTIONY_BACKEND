@@ -42,18 +42,18 @@ public class ChatService {
     }
 
     //채팅방 생성
-    public ChatResponseDTO.CreateRoomRsDTO createChatRoom(ChatRequestDTO.CreateRoomRqDTO request){
-        Post post = getPostOrThrow(request.getPostId());
-        User buyer = getUserOrThrow(request.getBuyerId());
+    public ChatResponseDTO.CreateRoomRsDTO createChatRoom(Long postId, Long buyerId){
+        Post post = getPostOrThrow(postId);
+        User buyer = getUserOrThrow(buyerId);
         User seller = post.getUser();
 
         //본인 게시글 자신이 구매 x
-        if (request.getBuyerId().equals(seller.getId())) {
+        if (buyerId.equals(seller.getId())) {
             throw new IllegalArgumentException("본인 게시글 구매 불가");
         }
 
         //동일 채팅방 있는 지 검사
-        ChatRoom chatRoom = chatRoomRepository.findByPostIdAndBuyerId(request.getPostId(), request.getBuyerId())
+        ChatRoom chatRoom = chatRoomRepository.findByPostIdAndBuyerId(postId, buyerId)
                 .orElseGet(() -> {
                     //없으면 새로 생성
                     ChatRoom newRoom = ChatRoom.builder()
@@ -145,6 +145,13 @@ public class ChatService {
     public void markMessagesAsRead(Long chatRoomId, Long userId) {
         if (!chatRoomRepository.existsById(chatRoomId)) {
             throw new IllegalArgumentException("존재하지 않는 채팅방입니다.");
+        }
+        ChatRoom room = getChatRoomOrThrow(chatRoomId);
+        boolean isSeller = room.getSeller().getId().equals(userId);
+        boolean isBuyer = room.getBuyer().getId().equals(userId);
+
+        if (!isSeller && !isBuyer) {
+            throw new IllegalArgumentException("해당 채팅방의 참여자가 아닙니다.");
         }
 
         //내가 보낸 메시지가 아닌 것들 중에서 read > false인 메시지들
