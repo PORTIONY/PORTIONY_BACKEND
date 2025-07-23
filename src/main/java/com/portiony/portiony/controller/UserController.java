@@ -82,13 +82,18 @@ public class UserController {
     public ResponseEntity<?> kakaoLoginSuccess(@RequestParam("code") String code) {
         log.info("카카오 로그인 redirect code 수신: {}", code);
 
-        // access token 요청 → 사용자 정보 가져오기 → 로그인 처리
-        LoginResponseDto response = userService.kakaoLogin(code);
+        Object result = userService.kakaoLogin(code);
 
-        return ResponseEntity.ok(response);
+        if (result instanceof LoginResponseDto loginResponse) {
+            return ResponseEntity.ok(loginResponse); // 기존 회원 → 로그인완료
+        } else if (result instanceof KakaoSignupRequestDto signupInfo) {
+            return ResponseEntity.status(HttpStatus.OK).body(signupInfo); // 신규 회원 → 가입절차로 이동
+        } else {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("카카오 로그인 처리 중 오류가 발생했습니다.");
+        }
     }
 
-    // 카카오 신규회원 가입
+    // 카카오 신규로그인 경우 회원가입완료
     @Hidden
     @PostMapping("/login/oauth/kakao/signup")
     public ResponseEntity<String> kakaoSignup(@Valid @RequestBody KakaoSignupRequestDto dto) {

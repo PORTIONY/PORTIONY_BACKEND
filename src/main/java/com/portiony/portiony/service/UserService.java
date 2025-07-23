@@ -127,14 +127,14 @@ public class UserService {
         return new LoginResponseDto(accessToken, refreshToken);
     }
 
-    public LoginResponseDto kakaoLogin(String code) {
+    public Object kakaoLogin(String code) {
 
         // 1. access token 요청
         String tokenUri = "https://kauth.kakao.com/oauth/token";
 
         LinkedMultiValueMap<String, String> params = new LinkedMultiValueMap<>();
         params.add("grant_type", "authorization_code");
-        params.add("client_id", kakaoClientId); // 카카오 REST API 키
+        params.add("client_id", kakaoClientId);
         params.add("redirect_uri", "http://localhost:8080/api/users/login/oauth/kakao/success");
         params.add("code", code);
 
@@ -143,7 +143,9 @@ public class UserService {
 
         HttpEntity<LinkedMultiValueMap<String, String>> tokenRequest = new HttpEntity<>(params, tokenHeaders);
         RestTemplate restTemplate = new RestTemplate();
-        ResponseEntity<Map> tokenResponse = restTemplate.postForEntity(tokenUri, tokenRequest, Map.class);
+        ResponseEntity<Map<String, Object>> tokenResponse = restTemplate.postForEntity(
+                tokenUri, tokenRequest, (Class<Map<String, Object>>) (Class<?>) Map.class
+        );
 
         if (!tokenResponse.getStatusCode().is2xxSuccessful()) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "카카오 토큰 요청 실패");
@@ -158,24 +160,48 @@ public class UserService {
         userInfoHeaders.setBearerAuth(accessToken);
 
         HttpEntity<Void> userInfoRequest = new HttpEntity<>(userInfoHeaders);
-        ResponseEntity<Map> userInfoResponse = restTemplate.exchange(userInfoUri, HttpMethod.GET, userInfoRequest, Map.class);
+        ResponseEntity<Map<String, Object>> userInfoResponse = restTemplate.exchange(
+                userInfoUri, HttpMethod.GET, userInfoRequest, (Class<Map<String, Object>>) (Class<?>) Map.class
+        );
 
         if (!userInfoResponse.getStatusCode().is2xxSuccessful()) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "카카오 사용자 정보 요청 실패");
         }
 
         Map<String, Object> kakaoAccount = (Map<String, Object>) userInfoResponse.getBody().get("kakao_account");
+        Map<String, Object> profile = (Map<String, Object>) kakaoAccount.get("profile");
+
         String email = (String) kakaoAccount.get("email");
+        if (email == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "카카오 계정에 이메일 정보가 없습니다.");
+        }
 
-        // 3. 기존 사용자 찾기
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "카카오 계정으로 가입된 사용자가 없습니다."));
+        Optional<User> userOptional = userRepository.findByEmail(email);
 
-        // 4. JWT access + refresh token 발급
-        String jwtAccessToken = jwtUtil.generateAccessToken(user.getEmail());
-        String jwtRefreshToken = refreshTokenService.createRefreshToken(user.getEmail()).getToken();
+        if (userOptional.isPresent()) {
+            // 기존 사용자: 토큰 발급 후 로그인 완료
+            User user = userOptional.get();
+            String jwtAccessToken = jwtUtil.generateAccessToken(user.getEmail());
+            String jwtRefreshToken = refreshTokenService.createRefreshToken(user.getEmail()).getToken();
+            return new LoginResponseDto(jwtAccessToken, jwtRefreshToken);
+        } else {
+            // 신규 사용자: 회원가입 요청용 정보 반환
+            String nickname = (String) profile.get("nickname");
+            String profileImage = (String) profile.get("profile_image_url");
 
-        return new LoginResponseDto(jwtAccessToken, jwtRefreshToken);
+            return new KakaoSignupRequestDto(
+                    email,
+                    nickname,
+                    profileImage,
+                    null, // regionId
+                    null, // subregionId
+                    null, // dongId
+                    null, // agreementIds
+                    null, // mainCategory
+                    null, // purchaseReason
+                    null  // situation
+            );
+        }
     }
 
     private HttpHeaders createHeaders() {
