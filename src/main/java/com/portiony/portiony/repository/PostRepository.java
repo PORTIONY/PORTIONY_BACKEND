@@ -14,6 +14,14 @@ public interface PostRepository extends JpaRepository<Post, Long> {
      */
     @Query("SELECT p FROM Post p " +
             "JOIN FETCH p.user " +
-            "WHERE p.id = :postId")
+            "WHERE p.id = :postId AND p.isDeleted = false")
     Optional<Post> findPostById(@Param("postId") Long postId);
+
+    /**
+     * 게시글 업데이트를 위한 검증
+     */
+    @Query("SELECT p FROM Post p " +
+            "JOIN FETCH p.user " +
+            "WHERE p.id = :postId and p.user.id = :userId AND p.isDeleted = false")
+    Optional<Post> findPostByIdAndUserId(@Param("postId") Long postId, @Param("userId") Long userId);
 }

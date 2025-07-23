@@ -3,13 +3,10 @@ package com.portiony.portiony.entity;
 import com.portiony.portiony.entity.common.BaseEntity;
 import com.portiony.portiony.entity.enums.PostStatus;
 import com.portiony.portiony.entity.enums.DeliveryMethod;
-import com.portiony.portiony.entity.enums.UserRole;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 
 @Entity
 @Getter
@@ -68,4 +65,22 @@ public class Post extends BaseEntity {
     @Column(name = "is_deleted", nullable = false, columnDefinition = "boolean default false")
     private boolean isDeleted = false;
 
+    public void update(String title, String description, int capacity, int price,
+                       String unit, LocalDateTime deadline, DeliveryMethod deliveryMethod){
+        this.title = title;
+        this.description = description;
+        this.capacity = capacity;
+        this.price = price;
+        this.unit = unit;
+        this.deadline = deadline;
+        this.deliveryMethod = deliveryMethod;
+    }
+
+    public void delete(){
+        this.isDeleted = true;
+    }
+
+    public void updateStatus(){
+        this.status = PostStatus.DONE;
+    }
 }
