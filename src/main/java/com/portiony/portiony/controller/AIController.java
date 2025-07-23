@@ -25,7 +25,8 @@ public class AIController {
     private final PostRepository postRepository;
 
     /**
-     * 선호 정보가 있으면 Gemini 추천, 없으면 최신순 게시글 반환
+     * 선호 정보가 없거나(존재하지 않거나), 전부 0이면 최신순 게시글
+     * 아니면 Gemini 추천
      * GET /api/post/recommend/{userId}?page=1
      */
     @GetMapping("/recommend/{userId}")
@@ -34,32 +35,36 @@ public class AIController {
         try {
             Optional<UserPreference> optionalPref = userPreferenceRepository.findByUserId(userId);
 
-            // ---------- [1] 선호 정보가 있는 경우 ----------
-            if (optionalPref.isPresent()) {
-                UserPreference pref = optionalPref.get();
+            // [1] 선호 정보가 없거나, 전부 0이면 → 최신순 게시글 반환
+            if (optionalPref.isEmpty() ||
+                    (optionalPref.get().getMainCategory() == 0 &&
+                            optionalPref.get().getPurchaseReason() == 0 &&
+                            optionalPref.get().getSituation() == 0)) {
 
-                String reason = UserPreferenceMapper.getPurchaseReason(pref.getPurchaseReason());
-                String situation = UserPreferenceMapper.getSituation(pref.getSituation());
-                Long categoryId = pref.getMainCategory().longValue();
+                Pageable pageable = PageRequest.of(page - 1, 10); // 0-based
+                Page<Post> postPage = postRepository.findRecentPosts(pageable);
 
-                List<Post> filteredPosts = postRepository.findAllByIsDeletedFalseAndCategory_Id(categoryId);
-                if (filteredPosts.isEmpty()) {
-                    return ResponseEntity.ok("추천할 게시글이 없습니다.");
-                }
-
-                List<Post> recommendedPosts = geminiService.generateRecommendation(filteredPosts, reason, situation);
-                List<PostDto> dtoList = recommendedPosts.stream()
+                List<PostDto> dtoList = postPage.getContent().stream()
                         .map(PostDto::from)
                         .toList();
 
                 return ResponseEntity.ok(dtoList);
             }
 
-            // ---------- [2] 선호 정보가 없는 경우: 최신순 게시글 반환 ----------
-            Pageable pageable = PageRequest.of(page - 1, 10); // 0-based
-            Page<Post> postPage = postRepository.findRecentPosts(pageable);
+            // [2] 선호 정보가 있는 경우 → Gemini 추천 로직 실행
+            UserPreference pref = optionalPref.get();
 
-            List<PostDto> dtoList = postPage.getContent().stream()
+            String reason = UserPreferenceMapper.getPurchaseReason(pref.getPurchaseReason());
+            String situation = UserPreferenceMapper.getSituation(pref.getSituation());
+            Long categoryId = pref.getMainCategory().longValue();
+
+            List<Post> filteredPosts = postRepository.findAllByIsDeletedFalseAndCategory_Id(categoryId);
+            if (filteredPosts.isEmpty()) {
+                return ResponseEntity.ok("추천할 게시글이 없습니다.");
+            }
+
+            List<Post> recommendedPosts = geminiService.generateRecommendation(filteredPosts, reason, situation);
+            List<PostDto> dtoList = recommendedPosts.stream()
                     .map(PostDto::from)
                     .toList();
 
