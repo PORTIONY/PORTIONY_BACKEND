@@ -18,6 +18,10 @@ import java.util.*;
 @RequiredArgsConstructor
 public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
+    //카카오로부터 사용자 정보 받아옴
+    //DB에 해당 사용자가 없으면 새로 생성 (약관동의,위치설정,선호조사)
+    //기존 사용자는 그대로 로그인
+
     private final UserRepository userRepository;
     private final JwtUtil jwtUtil;
 
@@ -30,16 +34,25 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         User user = userRepository.findByEmail(email).orElse(null);
 
         if (user == null) {
-            // 신규 회원, 추가정보 입력 필요
-            throw new RuntimeException("추가 정보 입력 필요");
+            Map<String, Object> attributes = new HashMap<>(oAuth2User.getAttributes());
+            attributes.put("email", email);
+            attributes.put("isNewUser", true); // 추가 정보 입력 필요 표시
+
+            return new DefaultOAuth2User(
+                    Collections.singleton(new SimpleGrantedAuthority("ROLE_GUEST")),
+                    attributes,
+                    "id"
+            );
         }
 
         // 기존 회원이면 JWT 토큰 생성
-        String token = jwtUtil.generateToken(user.getEmail());
+        String token = jwtUtil.generateAccessToken(user.getEmail());
 
-        // JWT 토큰을 OAuth2User 속성에 추가해서 컨트롤러에서 꺼낼 수 있게 하자
+
+        // JWT 토큰을 OAuth2User 속성에 추가해서 컨트롤러에서 꺼낼수있음
         Map<String, Object> attributes = new HashMap<>(oAuth2User.getAttributes());
         attributes.put("accessToken", token);
+        attributes.put("email", email);
 
         return new DefaultOAuth2User(
                 Collections.singleton(new SimpleGrantedAuthority(user.getRole().name())),

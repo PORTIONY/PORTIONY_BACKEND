@@ -8,4 +8,7 @@ import java.util.List;
 public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> {
     List<ChatMessage> findByChatRoomIdAndSenderIdNotAndIsReadFalse(Long chatRoomId, Long senderId);
     List<ChatMessage> findByChatRoomId(Long chatRoomId);
+    ChatMessage findTopByChatRoomIdOrderByCreatedAtDesc(Long chatRoomId);
+
+
 }

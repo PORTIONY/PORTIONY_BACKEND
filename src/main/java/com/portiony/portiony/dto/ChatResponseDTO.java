@@ -74,4 +74,64 @@ public class ChatResponseDTO {
         private LocalDateTime createdAt;
         private Boolean isRead;
     }
+
+    //채팅방 목록 조회
+    @Getter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class PostDTO {
+        private Long postId;
+        private String title;
+        private String imageUrl;
+        private Integer price;
+        private LocalDateTime deadline;
+    }
+
+    @Getter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class PartnerDTO {
+        private Long partnerId;
+        private String name;
+        private String profileImageUrl;
+    }
+
+    @Getter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class StatusDTO {
+        private ChatStatus sellerStatus;
+        private ChatStatus buyerStatus;
+    }
+
+    @Getter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ChatRoomPreviewDTO {
+        private Long chatRoomId;
+        private PostDTO post;
+        private PartnerDTO partner;
+        private Long lastMessageSenderId;
+        private String lastMessage;
+        private LocalDateTime lastMessageTime;
+        private Boolean isRead;
+        private StatusDTO status;
+    }
+
+    @Getter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ChatRoomListResponseDTO {
+        private List<ChatRoomPreviewDTO> chatRoomsList;
+    }
+
+
+
+
+
 }

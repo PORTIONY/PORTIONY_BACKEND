@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 public class CustomUserDetailsService implements UserDetailsService {
+    //JwtAuthenticationFilter가 토큰에서 이메일을 꺼낸 후, 실제 유저 정보 DB에서 조회하는
 
     private final UserRepository userRepository;
 

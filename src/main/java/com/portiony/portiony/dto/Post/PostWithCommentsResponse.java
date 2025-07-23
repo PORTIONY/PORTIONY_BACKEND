@@ -12,6 +12,6 @@ import java.util.List;
 @Getter
 public class PostWithCommentsResponse {
     private PostDetailResponse post;
-    private List<CommentListResponse> comments;
+    private CommentListResponse comments;
 }
 
