@@ -376,19 +376,47 @@ public class UserService {
         user.setStatus(UserStatus.WITHDRAWN);
     }
 
+    // 거래 완료 인원 계산(성능 이슈로 추후 디벨롭 때에 쿼리 변경 고민해보기)
+    private Map<Long, Integer> getCompletedCountMap() {
+        return chatRoomRepository.countCompletedByPostIdGrouped().stream()
+                .collect(Collectors.toMap(
+                        row -> (Long) row[0],
+                        row -> ((Long) row[1]).intValue()
+                ));
+    }
+
+    // 썸네일url 추출
+    private String getThumbnailUrl(Long postId) {
+        return postImageRepository.findThumbnailUrlByPostId(postId)
+                .orElse(null);
+    }
+
+    // 디테일필드 출력
+    private String buildDetails(int capacity, int completed) {
+        return "공구인원 " + capacity + "명 · 거래완료 " + completed + "명";
+    }
+
+    // 마감일출력 포맷
+    private String formatDaysLeft(LocalDateTime deadline) {
+        long diff = ChronoUnit.DAYS.between(LocalDateTime.now(), deadline);
+        return diff < 0 ? "공구 마감" : "D-" + diff;
+    }
+
     // 내 구매 내역 조회
-    public PageResponse<PurchaseHistoryResponse> getMyPurchases(CustomUserDetails userDetails, String dateSort, String priceSort, PostStatus status, int page, int size) {
+    public PageResponse<PurchaseHistoryResponse> getMyPurchases(CustomUserDetails userDetails, String dateSort, String priceSort, int page, int size) {
 
         User  user = userDetails.getUser();
 
         Pageable pageable = PageRequest.of(page - 1, size, getSort(dateSort, priceSort));
 
-        Page<PurchaseProjectionDto> purchases = chatRoomRepository.findPurchasesWithPost(user.getId(), status, pageable);
+        Page<PurchaseProjectionDto> purchases = chatRoomRepository.findPurchasesWithPost(user.getId(), pageable);
 
         List<PurchaseHistoryResponse> content = purchases.getContent().stream()
                 .map(dto -> {
-                    String thumbnail = postImageRepository.findThumbnailUrlByPostId(dto.getPostId())
-                            .orElse(null);
+                    String daysLeft = formatDaysLeft(dto.getDeadline());
+                    String thumbnail = getThumbnailUrl(dto.getPostId());
+                    Map<Long, Integer> completedCountMap = getCompletedCountMap();
+                    String details = buildDetails(dto.getCapacity(), completedCountMap.getOrDefault(dto.getPostId(), 0));
 
                     return PurchaseHistoryResponse.builder()
                             .postId(dto.getPostId())
@@ -396,10 +424,9 @@ public class UserService {
                             .price(dto.getPrice())
                             .thumbnail(thumbnail)
                             .region(dto.getRegion())
-                            //마감일 지나면 날짜가 음수로 이상하게 출력될 수 있을 것 같음. 추후 업데이트 고려하기.
-                            .daysLeft((int) ChronoUnit.DAYS.between(LocalDateTime.now(), dto.getDeadline()))
                             .purchasedAt(dto.getCreatedAt())
-                            .status(dto.getStatus())
+                            .daysLeft((daysLeft))
+                            .details(details)
                             .build();
                 })
                 .collect(Collectors.toList());
@@ -417,8 +444,10 @@ public class UserService {
 
         List<SaleHistoryResponse> content = sales.getContent().stream()
                 .map(dto -> {
-                    String thumbnail = postImageRepository.findThumbnailUrlByPostId(dto.getPostId())
-                            .orElse(null);
+                    String daysLeft = formatDaysLeft(dto.getDeadline());
+                    String thumbnail = getThumbnailUrl(dto.getPostId());
+                    Map<Long, Integer> completedCountMap = getCompletedCountMap();
+                    String details = buildDetails(dto.getCapacity(), completedCountMap.getOrDefault(dto.getPostId(), 0));
 
                     return SaleHistoryResponse.builder()
                             .postId(dto.getPostId())
@@ -426,10 +455,10 @@ public class UserService {
                             .price(dto.getPrice())
                             .thumbnail(thumbnail)
                             .region(dto.getRegion())
-                            //마감일 지나면 날짜가 음수로 이상하게 출력될 수 있을 것 같음. 추후 업데이트 고려하기.
-                            .daysLeft((int) ChronoUnit.DAYS.between(LocalDateTime.now(), dto.getDeadline()))
                             .createdAt(dto.getCreatedAt())
+                            .daysLeft((daysLeft))
                             .status(dto.getStatus())
+                            .details(details)
                             .build();
                 })
                 .collect(Collectors.toList());
@@ -437,7 +466,50 @@ public class UserService {
         return new PageResponse<>(sales.getTotalElements(), sales.getNumber() + 1, content);
     }
 
-    // 내가 쓴 후기 조회
+    // 찜 내역 조회
+    public PageResponse<PostLikeHistoryResponse> getWishlist(CustomUserDetails userDetails, String postLikeSort, PostStatus status, int page, int size) {
+
+        User user = userDetails.getUser();
+
+        Pageable pageable = PageRequest.of(page - 1, size, getWishlistSort(postLikeSort));
+
+        Page<PostLikeProjectionDto> likes = postLikeRepository.findPostLikeWithRegion(user.getId(), status, pageable);
+
+        List<PostLikeHistoryResponse> content = likes.getContent().stream()
+                .map(dto -> {
+                    String daysLeft = formatDaysLeft(dto.getDeadline());
+                    String thumbnail = getThumbnailUrl(dto.getPostId());
+                    Map<Long, Integer> completedCountMap = getCompletedCountMap();
+                    String details = buildDetails(dto.getCapacity(), completedCountMap.getOrDefault(dto.getPostId(), 0));
+
+                    return PostLikeHistoryResponse.builder()
+                            .postId(dto.getPostId())
+                            .title(dto.getTitle())
+                            .price(dto.getPrice())
+                            .thumbnail(thumbnail)
+                            .region(dto.getRegion())
+                            .createdAt(dto.getCreatedAt())
+                            .daysLeft((daysLeft))
+                            .status(dto.getStatus())
+                            .details(details)
+                            .build();
+                }).collect(Collectors.toList());
+
+        return new PageResponse<>(likes.getTotalElements(), likes.getNumber() + 1, content);
+    }
+
+    // 구매*판매 필터링
+    private String getReviewType(ChatRoom chatRoom, Long userId) {
+        if (chatRoom.getBuyer() != null && chatRoom.getBuyer().getId().equals(userId)) {
+            return "purchase";
+        } else if (chatRoom.getSeller() != null && chatRoom.getSeller().getId().equals(userId)) {
+            return "sale";
+        } else {
+            return "unknown"; // 예외
+        }
+    }
+
+    // 내가 쓴 후기 조회 (내 프로필 진입)
     public PageResponse<ReviewHistoryResponse> getReviewsByMe(CustomUserDetails userDetails, String type, String reviewSort, Boolean writtenStatus, int page, int size) {
 
         User user = userDetails.getUser();
@@ -469,14 +541,7 @@ public class UserService {
                     ChatRoom chatRoom = review.getChatRoom();
                     Post post = chatRoom.getPost();
 
-                    String reviewType;
-                    if (chatRoom.getSeller() != null && chatRoom.getBuyer().getId().equals(user.getId())) {
-                        reviewType = "purchase";
-                    } else if (chatRoom.getBuyer() != null && chatRoom.getSeller().getId().equals(user.getId())) {
-                        reviewType = "sale";
-                    } else {
-                        reviewType = "unknown"; // 예외
-                    }
+                    String reviewType = getReviewType(chatRoom, user.getId());
 
                     return ReviewHistoryResponse.builder()
                             .postId(post.getId())
@@ -494,7 +559,7 @@ public class UserService {
         return new PageResponse<>(allReviews.getTotalElements(), allReviews.getNumber() + 1, content);
     }
 
-    // 받은 후기 조회
+    // 받은 후기 조회 (타유저 프로필 진입)
     public PageResponse<ReviewHistoryResponse> getReviewsByOther(CustomUserDetails userDetails, Long userId, String type, String reviewSort, String starSort, int page, int size) {
 
         User user = userDetails.getUser();
@@ -509,14 +574,7 @@ public class UserService {
                     ChatRoom chatRoom = review.getChatRoom();
                     Post post = chatRoom.getPost();
 
-                    String reviewType;
-                    if (chatRoom.getSeller() != null && chatRoom.getBuyer().getId().equals(user.getId())) {
-                        reviewType = "purchase";
-                    } else if (chatRoom.getBuyer() != null && chatRoom.getSeller().getId().equals(user.getId())) {
-                        reviewType = "ssale";
-                    } else {
-                        reviewType = "unknown"; // 예외
-                    }
+                    String reviewType = getReviewType(chatRoom, user.getId());
 
                     return ReviewHistoryResponse.builder()
                             .postId(post.getId())
@@ -532,36 +590,6 @@ public class UserService {
                 .collect(Collectors.toList());
 
         return new PageResponse<>(reviews.getTotalElements(), reviews.getNumber() + 1, content);
-    }
-
-    // 찜 내역 조회
-    public PageResponse<PostLikeHistoryResponse> getWishlist(CustomUserDetails userDetails, String postLikeSort, PostStatus status, int page, int size) {
-
-        User user = userDetails.getUser();
-
-        Pageable pageable = PageRequest.of(page - 1, size, getWishlistSort(postLikeSort));
-
-        Page<PostLikeProjectionDto> likes = postLikeRepository.findPostLikeWithRegion(user.getId(), status, pageable);
-
-        List<PostLikeHistoryResponse> content = likes.getContent().stream()
-            .map(dto -> {
-                String thumbnail = postImageRepository.findThumbnailUrlByPostId(dto.getPostId())
-                        .orElse(null);
-
-                return PostLikeHistoryResponse.builder()
-                        .postId(dto.getPostId())
-                        .title(dto.getTitle())
-                        .price(dto.getPrice())
-                        .thumbnail(thumbnail)
-                        .region(dto.getRegion())
-                        .createdAt(dto.getCreatedAt())
-                        //마감일 지나면 날짜가 음수로 이상하게 출력될 수 있을 것 같음. 추후 업데이트 고려하기.
-                        .daysLeft((int) ChronoUnit.DAYS.between(LocalDateTime.now(), dto.getDeadline()))
-                        .status(dto.getStatus())
-                        .build();
-            }).collect(Collectors.toList());
-
-        return new PageResponse<>(likes.getTotalElements(), likes.getNumber() + 1, content);
     }
 
     // 리뷰 등록

@@ -17,6 +17,6 @@ public class PurchaseHistoryResponse {
     private String thumbnail;
     private String region;
     private LocalDateTime purchasedAt;
-    private int daysLeft;
-    private PostStatus status;
+    private String daysLeft;
+    private String details;
 }

@@ -15,7 +15,6 @@ public class PurchaseProjectionDto {
     private String region;
     private LocalDateTime deadline;
     private LocalDateTime createdAt;
-    private PostStatus status;
     private LocalDateTime purchasedAt;
-    private Long thumbnailPostId;
+    private int capacity;
 }
