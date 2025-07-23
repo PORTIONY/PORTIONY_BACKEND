@@ -61,7 +61,7 @@ logging:
     org.hibernate.SQL: OFF
     org.hibernate.type.descriptor.sql.BasicBinder: OFF
 
-#frontend:
-#  domain: ${FRONT_DOMAIN}
+frontend:
+  domain: ${FRONT_DOMAIN}
 #redis:
 #  domain: ${REDIS_DOMAIN}
