@@ -204,7 +204,6 @@ public class UserController {
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long reviewId
     ) {
-        //Long userId = extractUserIdFromToken(authHeader);
         userService.deleteReview(userDetails, reviewId);
         return ResponseEntity.ok(Collections.singletonMap("message", "후기가 삭제되었습니다."));
     }

@@ -393,6 +393,7 @@ public class UserService {
 
     // 디테일필드 출력
     private String buildDetails(int capacity, int completed) {
+        if (capacity == 0) return "정보 없음";
         return "공구인원 " + capacity + "명 · 거래완료 " + completed + "명";
     }
 
@@ -625,6 +626,7 @@ public class UserService {
     }
 
     // 리뷰 삭제
+    // 사용자에게 삭제된 것 처럼 보이지만 star, choice, content null 처리 (soft-delete 방식으로 처리)
     @Transactional
     public void deleteReview(CustomUserDetails userDetails, Long reviewId) {
 
