@@ -10,7 +10,6 @@ import com.portiony.portiony.repository.*;
 import com.portiony.portiony.security.CustomUserDetails;
 import com.portiony.portiony.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.*;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -142,8 +141,8 @@ public class UserService {
         LinkedMultiValueMap<String, String> params = new LinkedMultiValueMap<>();
         params.add("grant_type", "authorization_code");
         params.add("client_id", kakaoClientId);
-        params.add("redirect_uri", "http://localhost:8080/api/users/login/oauth/kakao/success");
-        params.add("code", code);
+        params.add("redirect_uri", "http://localhost:3000/login/oauth/kakao"); // 프론트에서 인가코드 받은 주소
+        params.add("code", code); // 프론트에서 받은 인가 코드
 
         HttpHeaders tokenHeaders = new HttpHeaders();
         tokenHeaders.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
