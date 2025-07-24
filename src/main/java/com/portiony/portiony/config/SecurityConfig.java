@@ -91,7 +91,7 @@ public class SecurityConfig {
                 "https://" + frontendDomain, // 실제 프론트
                 "https://*.vercel.app" // 서브도메인 전체 허용도 가능
         ));
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS" , "PATCH"));
         config.setAllowedHeaders(List.of("*"));
         config.setExposedHeaders(List.of("Authorization"));
         config.setAllowCredentials(true); // credentials: 'include' 쓰는 경우 필요
