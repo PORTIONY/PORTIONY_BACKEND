@@ -16,10 +16,12 @@ import jakarta.validation.Valid;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 import lombok.extern.slf4j.Slf4j;
 import io.swagger.v3.oas.annotations.Hidden;
@@ -102,9 +104,11 @@ public class UserController {
     }
 
     // 내 프로필 수정
-    @PatchMapping("/me")
+    // 추후 s3Service 구현시 주석 해제
+    @PatchMapping("/me") //, consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String, String>> editProfile(
             @AuthenticationPrincipal CustomUserDetails userDetails, @RequestBody EditProfileRequest request) {
+            //@RequestPart(value = "image", required = false) MultipartFile profileImage) {
         userService.editProfile(userDetails, request);
         return ResponseEntity.ok(Collections.singletonMap("message", "프로필이 수정되었습니다."));
     }

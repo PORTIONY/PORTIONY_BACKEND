@@ -26,6 +26,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.HttpStatus;
 import org.springframework.beans.factory.annotation.Value;
@@ -333,6 +334,7 @@ public class UserService {
     }
 
     // 프로필 편집
+    //s3 서비스 구현 시 파라미터에 프로필이미지 추가하기
     @Transactional
     public void editProfile(CustomUserDetails userDetails, EditProfileRequest request) {
 
@@ -361,6 +363,11 @@ public class UserService {
 
             user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         }
+
+        // 프로필 이미지 수정 (s3Service 구현 시 추후 주석 해제)
+//        if (profileImage != null && !profileImage.isEmpty()) {
+//            String imageUrl = s3Service.upload(profileImage, "profile-images");
+//            user.setProfileImage(imageUrl);
     }
 
     // 회원 탈퇴
