@@ -21,6 +21,12 @@ spring:
         hbm2ddl:
           auto: update
     database: mysql
+    defer-datasource-initialization: true
+
+  sql:
+    init:
+      mode: always
+
   profiles:
     include:
       - database
