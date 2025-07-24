@@ -24,14 +24,13 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long>, JpaSp
 
     Optional<ChatRoom> findByPostIdAndBuyerId(Long postId, Long buyerId);
 
-    @Query("SELECT new com.portiony.portiony.dto.user.PurchaseProjectionDto(" +
-           "cr.post.id, cr.post.title, cr.post.price," +
-           "cr.post.user.region.city, cr.post.deadline, cr.post.createdAt," +
-           "cr.post.status, cr.finishDate, cr.post.id) " +
-           "FROM ChatRoom cr " +
-           "WHERE cr.buyer.id = :userId")
-    Page<PurchaseProjectionDto> findPurchasesIncludePost(@Param("userId") Long userId, Pageable pageable);
-
+//    @Query("SELECT new com.portiony.portiony.dto.user.PurchaseProjectionDto(" +
+//           "cr.post.id, cr.post.title, cr.post.price," +
+//           "cr.post.user.region.city, cr.post.deadline, cr.post.createdAt," +
+//           "cr.post.status, cr.finishDate, cr.post.id) " +
+//           "FROM ChatRoom cr " +
+//           "WHERE cr.buyer.id = :userId")
+//    Page<PurchaseProjectionDto> findPurchasesIncludePost(@Param("userId") Long userId, Pageable pageable);
 
     @Query("""
     SELECT new com.portiony.portiony.dto.user.PurchaseProjectionDto(
@@ -39,17 +38,15 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long>, JpaSp
         CONCAT(s.district, ' ', d.dong),
         cr.post.deadline,
         cr.post.createdAt,
-        cr.post.status,
         cr.finishDate,
-        cr.post.id    
+        cr.post.capacity
     )
     FROM ChatRoom cr JOIN cr.post p JOIN p.user u 
     JOIN Subregion s ON s.region = u.region
     JOIN Dong d ON d.subregion = s
     WHERE cr.buyer.id = :userId
-    AND (:status IS NULL OR p.status = :status)
     """)
-    Page<PurchaseProjectionDto> findPurchasesWithPost(@Param("userId") Long userId, @Param("status") PostStatus status, Pageable pageable);
+    Page<PurchaseProjectionDto> findPurchasesWithPost(@Param("userId") Long userId, Pageable pageable);
 
     // 구매자와 판매자 같은 아이디일 경우 방지 쿼리 추가 (2025.07.22)
     @Query("""
@@ -60,7 +57,7 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long>, JpaSp
         cr.post.createdAt,
         cr.post.status,
         cr.finishDate,
-        cr.post.id    
+        cr.post.capacity
     )
     FROM ChatRoom cr JOIN cr.post p JOIN p.user u 
     JOIN Subregion s ON s.region = u.region
@@ -71,4 +68,12 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long>, JpaSp
     
     """)
     Page<SaleProjectionDto> findSalesWithPost(@Param("userId") Long userId, @Param("status") PostStatus status, Pageable pageable);
+
+    @Query("""
+    SELECT cr.post.id, COUNT(cr)
+    FROM ChatRoom cr
+    WHERE cr.sellerStatus = 'COMPLETED' AND cr.buyerStatus = 'COMPLETED'
+    GROUP BY cr.post.id
+    """)
+    List<Object[]> countCompletedByPostIdGrouped();
 }

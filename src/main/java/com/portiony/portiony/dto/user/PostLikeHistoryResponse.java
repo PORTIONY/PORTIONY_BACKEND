@@ -17,6 +17,7 @@ public class PostLikeHistoryResponse {
     private String thumbnail;
     private String region;
     private LocalDateTime createdAt;
-    private int daysLeft;
+    private String daysLeft;
     private PostStatus status;
+    private String details;
 }

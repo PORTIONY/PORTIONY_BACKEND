@@ -35,8 +35,6 @@ import java.util.Map;
 public class UserController {
 
     private final UserService userService;
-    private final UserRepository userRepository;
-    private final JwtUtil jwtUtil;
 
     // 이메일 중복 체크
     @GetMapping("/signup/check-email")
@@ -125,11 +123,10 @@ public class UserController {
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam(defaultValue = "recent") String dateSort,
             @RequestParam(required = false) String priceSort,
-            @RequestParam(required = false) PostStatus status,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "12") int size
     ) {
-        return userService.getMyPurchases(userDetails, dateSort, priceSort, status, page, size);
+        return userService.getMyPurchases(userDetails, dateSort, priceSort, page, size);
     }
 
     // 판매 내역 조회 (특정 유저)
@@ -207,7 +204,6 @@ public class UserController {
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long reviewId
     ) {
-        //Long userId = extractUserIdFromToken(authHeader);
         userService.deleteReview(userDetails, reviewId);
         return ResponseEntity.ok(Collections.singletonMap("message", "후기가 삭제되었습니다."));
     }
