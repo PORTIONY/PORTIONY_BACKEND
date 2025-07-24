@@ -361,6 +361,7 @@ public class UserService {
             }
 
             user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+            System.out.println("[디버그] 인코딩된 새 비밀번호: " + request.getNewPassword());
         }
 
         // 프로필 이미지 수정 (s3Service 구현 시 추후 주석 해제)
