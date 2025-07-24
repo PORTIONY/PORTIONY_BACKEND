@@ -5,6 +5,8 @@ server:
       charset: UTF-8
       enabled: true
       force: true
+  jackson:
+    time-zone: Asia/Seoul
 
 spring:
   application:
