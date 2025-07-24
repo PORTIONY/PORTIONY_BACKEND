@@ -51,7 +51,7 @@ gemini:
 
 jwt:
   secret: ${JWT_SECRET_KEY}
-  accessExpiration: 3600000
+  accessExpiration: 86400000 #1일 > 테스트용, 테스트 후 수정 필요
   refreshExpiration: 2592000000
 
 logging:
