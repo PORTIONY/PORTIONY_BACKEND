@@ -3,7 +3,6 @@ package com.portiony.portiony.dto.Post;
 import lombok.Getter;
 import com.portiony.portiony.entity.enums.PostStatus;
 
-
 @Getter
 public class UpdatePostStatusResponse {
     private final String message;

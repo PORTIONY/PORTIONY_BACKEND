@@ -111,10 +111,11 @@ public class PostService {
     public UpdatePostStatusResponse updateStatus(Long postId, Long currentUserId, PostStatus newStatus) {
         Post post = postRepository.findPostByIdAndUserId(postId, currentUserId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "게시글이 없거나 권한이 없습니다."));
-        PostStatus updatedStatus = post.updateStatus(newStatus);
-        return new UpdatePostStatusResponse(updatedStatus);
-    }
 
+        post.updateStatus(newStatus);
+
+        return new UpdatePostStatusResponse(post.getStatus());
+    }
 
     @Transactional
     public LikePostResponse likePost(Long postId, CustomUserDetails userDetails) {
