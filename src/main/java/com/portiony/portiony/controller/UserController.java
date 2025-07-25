@@ -187,18 +187,18 @@ public class UserController {
     }
 
     // 후기 등록
-    @PostMapping("/me/reviews/{reviewId}")
+    @PostMapping("/me/reviews/{chatRoomId}")
     public ResponseEntity<Map<String, String>> registerReview(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @PathVariable Long reviewId,
+            @PathVariable Long chatRoomId,
             @RequestBody @Valid ReviewRegisterRequest request
     ) {
       
         //후기등록 api 로그
         log.info("리뷰 등록 요청: reviewId={}, star={}, choice={}, content={}",
-                reviewId, request.getStar(), request.getChoice(), request.getContent());
+                chatRoomId, request.getStar(), request.getChoice(), request.getContent());
 
-        userService.registerReview(userDetails, reviewId, request);
+        userService.registerReview(userDetails, chatRoomId, request);
         return ResponseEntity.ok(Collections.singletonMap("message", "후기가 등록되었습니다."));
     }
 
@@ -206,9 +206,9 @@ public class UserController {
     @DeleteMapping("/me/reviews/{reviewId}")
     public ResponseEntity<Map<String, String>> deleteReview(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @PathVariable Long reviewId
+            @PathVariable Long chatRoomId
     ) {
-        userService.deleteReview(userDetails, reviewId);
+        userService.deleteReview(userDetails, chatRoomId);
         return ResponseEntity.ok(Collections.singletonMap("message", "후기가 삭제되었습니다."));
     }
 

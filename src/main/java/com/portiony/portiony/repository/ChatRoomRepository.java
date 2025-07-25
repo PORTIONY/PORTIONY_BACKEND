@@ -35,7 +35,7 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long>, JpaSp
     // 중복Count 방지로직 추가
     @Query(value = """
     SELECT DISTINCT new com.portiony.portiony.dto.user.PurchaseProjectionDto(
-        cr.post.id, cr.post.title, cr.post.price, 
+        cr.post.id, cr.id, cr.post.title, cr.post.price, 
         CONCAT(u.subregion.district, ' ', u.dong.dong),
         cr.post.deadline,
         cr.post.createdAt,
@@ -56,7 +56,7 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long>, JpaSp
     // 구매자와 판매자 같은 아이디일 경우 방지 쿼리 추가 (2025.07.22)
     @Query(value = """
     SELECT DISTINCT new com.portiony.portiony.dto.user.SaleProjectionDto(
-        cr.post.id, cr.post.title, cr.post.price, 
+        cr.post.id, cr.id, cr.post.title, cr.post.price, 
         CONCAT(u.subregion.district, ' ', u.dong.dong),
         cr.post.deadline,
         cr.post.createdAt,
@@ -72,8 +72,10 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long>, JpaSp
     """,
     countQuery = """
     SELECT COUNT(DISTINCT cr.id)
-    FROM ChatRoom cr
+    FROM ChatRoom cr JOIN cr.post p
     WHERE cr.seller.id = :userId
+        AND cr.buyer.id <> :userId
+        AND (:status IS NULL OR cr.post.status = :status)
     """)
     Page<SaleProjectionDto> findSalesWithPost(@Param("userId") Long userId, @Param("status") PostStatus status, Pageable pageable);
 
@@ -84,4 +86,20 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long>, JpaSp
     GROUP BY cr.post.id
     """)
     List<Object[]> countCompletedByPostIdGrouped();
+
+    @Query("""
+    SELECT COUNT(cr)
+    FROM ChatRoom cr
+    WHERE cr.buyer.id = :userId
+    AND cr.buyerStatus = 'COMPLETED'
+    """)
+    int countPurchases(@Param("userId") Long userId);
+
+    @Query("""
+    SELECT COUNT(cr)
+    FROM ChatRoom cr
+    WHERE cr.seller.id = :userId
+    AND cr.sellerStatus = 'COMPLETED'
+    """)
+    int countSales(@Param("userId") Long userId);
 }

@@ -34,6 +34,8 @@ import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static com.portiony.portiony.entity.enums.ChatStatus.COMPLETED;
+
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -165,7 +167,7 @@ public class UserService {
         LinkedMultiValueMap<String, String> params = new LinkedMultiValueMap<>();
         params.add("grant_type", "authorization_code");
         params.add("client_id", kakaoClientId);
-        params.add("redirect_uri", "http://localhost:3000/login/oauth/kakao"); // 프론트에서 인가코드 받은 주소
+        params.add("redirect_uri", "https://portiony.netlify.app/login/oauth/kakao"); // 프론트에서 인가코드 받은 주소
         params.add("code", code); // 프론트에서 받은 인가 코드
 
         HttpHeaders tokenHeaders = new HttpHeaders();
@@ -333,12 +335,15 @@ public class UserService {
 
         User user = userDetails.getUser();
 
+        int purchaseCount = chatRoomRepository.countPurchases(user.getId());
+        int salesCount = chatRoomRepository.countSales(user.getId());
+
         return UserProfileResponse.builder()
                 .userId(user.getId())
                 .nickname(user.getNickname())
                 .profileImage(user.getProfileImage())
-                .purchasesCount(user.getPurchase_count())
-                .salesCount(user.getSalesCount())
+                .purchasesCount(purchaseCount)
+                .salesCount(salesCount)
                 .positiveRate(user.getStar()) // 임시 값
                 .isMine(true)
                 .build();
@@ -632,33 +637,60 @@ public class UserService {
 
     // 리뷰 등록
     @Transactional
-    public void registerReview(CustomUserDetails userDetails, Long reviewId, ReviewRegisterRequest request) {
+    public Long registerReview(CustomUserDetails userDetails, Long chatRoomId, ReviewRegisterRequest request) {
 
         User user = userDetails.getUser();
 
-        Review review = reviewRepository.findById(reviewId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "해당 리뷰가 존재하지 않습니다."));
+        ChatRoom cr = chatRoomRepository.findById(chatRoomId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "해당 채팅방이 존재하지 않습니다."));
 
-        // 이미 리뷰 등록된 경우 방지
-        if (review.getStar() > 0.0) {
+        // 거래 완료 여부 체크
+        if (cr.getSellerStatus() != COMPLETED || cr.getBuyerStatus() != COMPLETED) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "거래 완료된 채팅방만 리뷰를 작성할 수 있습니다.");
+        }
+
+        // 참여자여부 판단
+        if (!cr.getBuyer().getId().equals(user.getId()) && !cr.getSeller().getId().equals(user.getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "이 채팅방의 참여자만 리뷰를 작성할 수 있습니다.");
+        }
+
+        User target = cr.getBuyer().getId().equals(user.getId()) ? cr.getSeller() : cr.getBuyer();
+
+        Review review = reviewRepository.findByChatRoomIdAndWriterId(chatRoomId, user.getId())
+                .orElseGet(() ->
+                    Review.builder()
+                        .chatRoom(cr)
+                        .writer(user)
+                        .target(target)
+                        .star(0.0)
+                        .build());
+
+        // 이미 작성된 리뷰 방지
+        if (review.getStar() != 0.0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "이미 등록된 리뷰입니다.");
         }
 
-        if (!review.getWriter().getId().equals(user.getId()) &&
-                !review.getTarget().getId().equals(user.getId())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "리뷰 작성 권한이 없습니다.");
-        }
+        // 검증 로직 실행
+        validateAndApplyReview(request, review);
+        reviewRepository.save(review);
 
+        return review.getId();
+    }
+
+    private void validateAndApplyReview(ReviewRegisterRequest request, Review review) {
         boolean hasChoice = request.getChoice() != null;
         boolean hasContent = request.getContent() != null;
 
         review.setStar(request.getStar());
 
-        // NOT choice && content 검증로직
-        if(hasChoice) {
+        if (hasChoice && hasContent) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "choice와 content는 동시에 보낼 수 없습니다.");
+        }
+
+        if (hasChoice) {
             review.setChoice(request.getChoice());
             review.setContent(null);
-        } else if(hasContent) {
+        } else if (hasContent) {
             review.setContent(request.getContent());
             review.setChoice(null);
         } else {
@@ -670,11 +702,11 @@ public class UserService {
     // 리뷰 삭제
     // 사용자에게 삭제된 것 처럼 보이지만 star, choice, content null 처리 (soft-delete 방식으로 처리)
     @Transactional
-    public void deleteReview(CustomUserDetails userDetails, Long reviewId) {
+    public void deleteReview(CustomUserDetails userDetails, Long chatRoomId) {
 
         User user = userDetails.getUser();
 
-        Review review = reviewRepository.findById(reviewId)
+        Review review = reviewRepository.findByChatRoomIdAndWriterId(chatRoomId, user.getId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "해당 리뷰가 존재하지 않습니다."));
 
         // 이미 삭제된 리뷰 방지
