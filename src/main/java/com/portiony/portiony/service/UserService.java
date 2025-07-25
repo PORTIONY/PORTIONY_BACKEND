@@ -10,6 +10,7 @@ import com.portiony.portiony.repository.*;
 import com.portiony.portiony.security.CustomUserDetails;
 import com.portiony.portiony.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -38,6 +39,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Transactional
+@Slf4j
 public class UserService {
 
     private final UserRepository userRepository;
@@ -110,18 +112,42 @@ public class UserService {
     }
 
     public LoginResponseDto signup(SignupRequestDto dto) {
+        Optional<User> existing = userRepository.findByEmail(dto.getEmail());
+
+        if (existing.isPresent()) {
+            User user = existing.get();
+
+            if (user.getStatus() == UserStatus.ACTIVE) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 사용 중인 이메일입니다.");
+            }
+
+            if (user.getStatus() == UserStatus.WITHDRAWN) {
+                LocalDateTime withdrawnAt = user.getUpdatedAt();
+                if (withdrawnAt != null && withdrawnAt.isAfter(LocalDateTime.now().minusMonths(1))) {
+                    throw new ResponseStatusException(HttpStatus.FORBIDDEN, "탈퇴 후 1개월 동안 재가입할 수 없습니다.");
+                } else {
+                    // 1개월 지난 계정은 삭제처리
+                    userRepository.delete(user);
+                }
+            }
+        }
+
         User user = createUser(dto);
         saveAgreementsAndPreferences(dto, user);
 
         String accessToken = jwtUtil.generateAccessToken(user.getEmail());
         String refreshToken = refreshTokenService.createRefreshToken(user.getEmail()).getToken();
 
-        return new LoginResponseDto(accessToken, refreshToken);
+        return new LoginResponseDto(accessToken, refreshToken, user.getId());
     }
 
     public LoginResponseDto login(LoginRequestDto dto) {
         User user = userRepository.findByEmail(dto.getEmail())
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 이메일입니다."));
+
+        if (user.getStatus() == UserStatus.WITHDRAWN) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "탈퇴 계정입니다.");
+        }
 
         if (!passwordEncoder.matches(dto.getPassword(), user.getPassword())) {
             throw new IllegalArgumentException("비밀번호가 일치하지 않습니다.");
@@ -130,7 +156,7 @@ public class UserService {
         String accessToken = jwtUtil.generateAccessToken(user.getEmail());
         String refreshToken = refreshTokenService.createRefreshToken(user.getEmail()).getToken();
 
-        return new LoginResponseDto(accessToken, refreshToken);
+        return new LoginResponseDto(accessToken, refreshToken, user.getId());
     }
 
     public Object kakaoLogin(String code) {
@@ -189,7 +215,7 @@ public class UserService {
             User user = userOptional.get();
             String jwtAccessToken = jwtUtil.generateAccessToken(user.getEmail());
             String jwtRefreshToken = refreshTokenService.createRefreshToken(user.getEmail()).getToken();
-            return new LoginResponseDto(jwtAccessToken, jwtRefreshToken);
+            return new LoginResponseDto(jwtAccessToken, jwtRefreshToken, user.getId());
         } else {
             // 신규 사용자: 회원가입 요청용 정보 반환
             String nickname = (String) profile.get("nickname");
@@ -224,7 +250,7 @@ public class UserService {
         String accessToken = jwtUtil.generateAccessToken(user.getEmail());
         String refreshToken = refreshTokenService.createRefreshToken(user.getEmail()).getToken();
 
-        return new KakaoSignupResponseDto(accessToken, refreshToken);
+        return new KakaoSignupResponseDto(accessToken, refreshToken, user.getId());
     }
 
     // 이메일 중복 확인
@@ -337,7 +363,9 @@ public class UserService {
     @Transactional
     public void editProfile(CustomUserDetails userDetails, EditProfileRequest request) {
 
-        User  user = userDetails.getUser();
+        User user = userRepository.findById(userDetails.getUser().getId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "유저를 찾을 수 없습니다."));
+
 
         //한번 더 검증하기
         if (request.getNickname() != null && !request.getNickname().equals(user.getNickname())) {
@@ -360,8 +388,10 @@ public class UserService {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"현재 비밀번호와 새로운 비밀번호가 일치합니다.");
             }
 
+            log.info("[DEBUG] 수정 전 DB 비밀번호: {}", user.getPassword());
             user.setPassword(passwordEncoder.encode(request.getNewPassword()));
-            System.out.println("[디버그] 인코딩된 새 비밀번호: " + request.getNewPassword());
+            userRepository.saveAndFlush(user);
+            log.info("[DEBUG] 수정 후 DB 비밀번호: {}", userRepository.findById(user.getId()).get().getPassword());
         }
 
         // 프로필 이미지 수정 (s3Service 구현 시 추후 주석 해제)
@@ -381,6 +411,8 @@ public class UserService {
         }
 
         user.setStatus(UserStatus.WITHDRAWN);
+        userRepository.saveAndFlush(user);
+        log.info("[DEBUG] 현재회원상태: {}", user.getStatus());
     }
 
     // 거래 완료 인원 계산(성능 이슈로 추후 디벨롭 때에 쿼리 변경 고민해보기)
