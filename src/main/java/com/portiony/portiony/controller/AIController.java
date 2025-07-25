@@ -56,19 +56,30 @@ public class AIController {
                             optionalPref.get().getSituation() == 0);
 
             List<PostCardDto> aiRecommended = new ArrayList<>();
+            boolean aiSuccess = false;
+
             if (hasValidPref) {
-                aiRecommended = geminiService.recommendPostCards(optionalPref.get());
+                try {
+                    aiRecommended = geminiService.recommendPostCards(optionalPref.get());
+                    aiSuccess = !aiRecommended.isEmpty();
+                } catch (Exception e) {
+                    System.out.println("Gemini 추천 실패: " + e.getMessage());
+                }
             }
 
-            long total = postRepository.countByIsDeletedFalse() + 12;
+            long postTotal = postRepository.countByIsDeletedFalse();
+            long total = aiSuccess ? postTotal + 12 : postTotal;
 
-            if (page == 1 && hasValidPref && !aiRecommended.isEmpty()) {
+
+            if (page == 1 && aiSuccess) {
                 Map<String, Object> response = new HashMap<>();
                 response.put("total", total);
                 response.put("page", page);
                 response.put("posts", aiRecommended);
+                response.put("isAI", true);
                 return ResponseEntity.ok(response);
             }
+
 
             PostStatus postStatus = null;
             if (status != null && !status.isBlank()) {
@@ -110,6 +121,7 @@ public class AIController {
             response.put("total", total);
             response.put("page", page);
             response.put("posts", posts);
+            response.put("isAI", false);
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
