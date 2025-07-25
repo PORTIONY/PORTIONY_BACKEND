@@ -14,18 +14,25 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
 
     @Query("""
     SELECT r FROM Review r JOIN r.chatRoom cr
-    WHERE cr.buyer.id = :userId OR cr.seller.id = :userId
+    WHERE r.writer.id = :userId 
+    AND (:type IS NULL OR :type = ''
+        OR (:type = 'purchase'  AND cr.buyer.id  = :userId)
+        OR (:type = 'sale' AND cr.seller.id = :userId))
+    AND (:writtenStatus IS NULL
+        OR (:writtenStatus = true  AND r.star <> 0.0)
+        OR (:writtenStatus = false AND r.star = 0.0))
 """)
-    Page<Review> findAllReviewsByMe(@Param("userId") Long userId, Pageable pageable);
+    Page<Review> findAllReviewsByMe(@Param("userId") Long userId, @Param("type") String type,
+                                    @Param("writtenStatus") Boolean writtenStatus, Pageable pageable);
 
     @Query( value = """
         SELECT r FROM Review r JOIN r.chatRoom cr
         WHERE r.target.id = :userId
         AND cr.sellerStatus = 'COMPLETED'
         AND cr.buyerStatus = 'COMPLETED'
-        AND (
-        (:type = 'buyer' AND cr.buyer.id = :userId)
-        OR (:type = 'seller' AND cr.seller.id = :userId)
+        AND ( :type IS NULL OR :type = ''
+        OR (:type = 'purchase' AND cr.buyer.id = :userId)
+        OR (:type = 'sale' AND cr.seller.id = :userId)
         )
     """)
     Page<Review> findReviewsByOther(@Param("userId") Long userId, @Param("type") String type, Pageable pageable);

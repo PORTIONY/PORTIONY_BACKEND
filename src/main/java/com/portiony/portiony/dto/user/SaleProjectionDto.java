@@ -2,11 +2,12 @@ package com.portiony.portiony.dto.user;
 
 import com.portiony.portiony.entity.enums.PostStatus;
 import lombok.AllArgsConstructor;
+import lombok.Data;
 import lombok.Getter;
 
 import java.time.LocalDateTime;
 
-@Getter
+@Data
 @AllArgsConstructor
 public class SaleProjectionDto {
     private Long postId;
@@ -17,5 +18,5 @@ public class SaleProjectionDto {
     private LocalDateTime createdAt;
     private PostStatus status;
     private LocalDateTime selledAt;
-    private Long thumbnailPostId;
+    private int capacity;
 }
