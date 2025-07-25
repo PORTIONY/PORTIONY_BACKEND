@@ -16,21 +16,25 @@ import java.util.Optional;
 public interface PostLikeRepository extends JpaRepository<PostLike, Long> {
     boolean existsByUserAndPostId(User user, Long postId);
 
-    @Query("""
+    @Query(value = """
     SELECT new com.portiony.portiony.dto.user.PostLikeProjectionDto(
-        pl.post.id, pl.post.title, pl.post.price, 
-        CONCAT(s.district, ' ', d.dong),
-        pl.post.createdAt,
-        pl.post.deadline,
-        pl.post.status,
+        p.id, p.title, p.price, 
+        CONCAT(u.subregion.district, ' ', u.dong.dong),
+        p.createdAt,
+        p.deadline,
+        p.status,
         pl.createdAt,
-        pl.post.id,
-        pl.post.capacity    
+        p.capacity    
     )
     FROM PostLike pl JOIN pl.post p JOIN p.user u 
-    JOIN Subregion s ON s.region = u.region
-    JOIN Dong d ON d.subregion = s
-    WHERE p.user.id = :userId
+    LEFT JOIN PostImage pi ON pi.post = p
+    WHERE pl.user.id = :userId
+    AND (:status IS NULL OR p.status = :status)
+    """,
+    countQuery = """
+    SELECT COUNT(DISTINCT p.id)
+    FROM PostLike pl JOIN pl.post p
+    WHERE pl.user.id = :userId
     AND (:status IS NULL OR p.status = :status)
     """)
     Page<PostLikeProjectionDto> findPostLikeWithRegion(@Param("userId") Long userId, @Param("status") PostStatus status, Pageable pageable);

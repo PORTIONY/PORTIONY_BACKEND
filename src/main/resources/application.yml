@@ -13,13 +13,13 @@ spring:
     name: portiony
 
   jpa:
-    show-sql: false
+    show-sql: true
     generate-ddl: true
     properties:
       hibernate:
-        show_sql: false
-        format_sql: false
-        use_sql_comments: false
+        show_sql: true
+        format_sql: true
+        use_sql_comments: true
         hbm2ddl:
           auto: update
     database: mysql
@@ -73,3 +73,8 @@ frontend:
   domain: ${FRONT_DOMAIN}
 #redis:
 #  domain: ${REDIS_DOMAIN}
+
+portiony:
+  location:
+    init:
+      enabled: false
