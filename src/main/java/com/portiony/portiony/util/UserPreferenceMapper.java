@@ -1,5 +1,7 @@
 package com.portiony.portiony.util;
 
+import com.portiony.portiony.entity.UserPreference;
+
 public class UserPreferenceMapper {
     public static String getCategoryName(int code) {
         return switch (code) {
@@ -29,5 +31,33 @@ public class UserPreferenceMapper {
             case 4 -> "취미 생활을 즐겨요";
             default -> "학생이에요";
         };
+    }
+
+    public static String toGeminiPrompt(UserPreference pref) {
+        StringBuilder sb = new StringBuilder();
+
+        sb.append("이 사용자는 ");
+
+        if (pref.getPurchaseReason() != 0) {
+            sb.append("‘")
+                    .append(getPurchaseReason(pref.getPurchaseReason()))
+                    .append("’의 이유로 구매하고 싶어하고, ");
+        }
+
+        if (pref.getSituation() != 0) {
+            sb.append("‘")
+                    .append(getSituation(pref.getSituation()))
+                    .append("’ 상황에 어울리는 상품을 찾고 있어요. ");
+        }
+
+        if (pref.getMainCategory() != 0) {
+            sb.append("이 사용자는 ‘")
+                    .append(getCategoryName(pref.getMainCategory()))
+                    .append("’ 카테고리를 선호해요. ");
+        }
+
+        sb.append("이 조건에 어울리는 공동구매 상품 10개만 골라줘. 결과는 번호만 알려줘. 예: 1, 3, 5");
+
+        return sb.toString();
     }
 }
