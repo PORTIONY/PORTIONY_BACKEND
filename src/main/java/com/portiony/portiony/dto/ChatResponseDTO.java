@@ -120,6 +120,7 @@ public class ChatResponseDTO {
         private LocalDateTime lastMessageTime;
         private Boolean isRead;
         private StatusDTO status;
+        private Boolean isSeller;
     }
 
     @Getter

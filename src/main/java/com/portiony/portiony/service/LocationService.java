@@ -26,6 +26,8 @@ public class LocationService {
     private String kakaoApiKey;
 
     public LocationResponseDto resolveRegionIds(double lat, double lng) {
+        // TODO: 카카오 API로부터 위도/경도를 통해 행정구역 정보 받아오기
+        /*
         String url = "https://dapi.kakao.com/v2/local/geo/coord2regioncode.json?x=" + lng + "&y=" + lat;
 
         HttpHeaders headers = new HttpHeaders();
@@ -45,6 +47,11 @@ public class LocationService {
         String subregionName = info.get("region_2depth_name").asText();  // ex: 강남구
         String dongName = info.get("region_3depth_name").asText();       // ex: 역삼동
 
+        // 로그 추가
+        System.out.println(">> regionName = " + regionName);
+        System.out.println(">> subregionName = " + subregionName);
+        System.out.println(">> dongName = " + dongName);
+
         Region region = regionRepository.findByCity(regionName)
                 .orElseThrow(() -> new IllegalArgumentException("해당 region 없음"));
 
@@ -55,5 +62,10 @@ public class LocationService {
                 .orElseThrow(() -> new IllegalArgumentException("해당 동 없음"));
 
         return new LocationResponseDto(region.getId(), subregion.getId(), dong.getId());
+        */
+
+        // 임시 하드코딩된 지역 ID 반환
+        // TODO: 추후 위 주석 복구하고 실시간 위치 기반 ID 반환 로직 활성화
+        return new LocationResponseDto(22L, 287L, 7486L);
     }
 }

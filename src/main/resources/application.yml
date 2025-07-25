@@ -5,6 +5,8 @@ server:
       charset: UTF-8
       enabled: true
       force: true
+  jackson:
+    time-zone: Asia/Seoul
 
 spring:
   application:
@@ -21,6 +23,12 @@ spring:
         hbm2ddl:
           auto: update
     database: mysql
+    defer-datasource-initialization: true
+
+  sql:
+    init:
+      mode: always
+
   profiles:
     include:
       - database
@@ -32,7 +40,7 @@ spring:
         registration:
           kakao:
             client-id: ${KAKAO_REST_API_KEY}
-            redirect-uri: http://localhost:8080/api/users/login/oauth/kakao/callback
+            redirect-uri: http://localhost:8080/api/users/loQgin/oauth/kakao/callback
             authorization-grant-type: authorization_code
             client-name: Kakao
             scope: profile_nickname, account_email
@@ -43,16 +51,15 @@ spring:
             user-info-uri: https://kapi.kakao.com/v2/user/me
             user-name-attribute: id
 
-#frontend:
-#  domain: ${FRONT_DOMAIN}
-#
-
 kakao:
   rest-api-key: ${KAKAO_REST_API_KEY}
 
+gemini:
+  api-key: ${GEMINI_API_KEY}
+
 jwt:
   secret: ${JWT_SECRET_KEY}
-  accessExpiration: 3600000
+  accessExpiration: 86400000 #1일 > 테스트용, 테스트 후 수정 필요
   refreshExpiration: 2592000000
 
 logging:
@@ -62,7 +69,7 @@ logging:
     org.hibernate.SQL: OFF
     org.hibernate.type.descriptor.sql.BasicBinder: OFF
 
-#frontend:
-#  domain: ${FRONT_DOMAIN}
+frontend:
+  domain: ${FRONT_DOMAIN}
 #redis:
 #  domain: ${REDIS_DOMAIN}

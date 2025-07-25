@@ -17,5 +17,5 @@ public class SaleProjectionDto {
     private LocalDateTime createdAt;
     private PostStatus status;
     private LocalDateTime selledAt;
-    private Long thumbnailPostId;
+    private int capacity;
 }

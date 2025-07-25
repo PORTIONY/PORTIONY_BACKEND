@@ -24,7 +24,8 @@ public interface PostLikeRepository extends JpaRepository<PostLike, Long> {
         pl.post.deadline,
         pl.post.status,
         pl.createdAt,
-        pl.post.id    
+        pl.post.id,
+        pl.post.capacity    
     )
     FROM PostLike pl JOIN pl.post p JOIN p.user u 
     JOIN Subregion s ON s.region = u.region
