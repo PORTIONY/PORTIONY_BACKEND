@@ -55,22 +55,31 @@ public class AIController {
                             optionalPref.get().getPurchaseReason() == 0 &&
                             optionalPref.get().getSituation() == 0);
 
-            if (page == 1 && hasValidPref) {
+            List<PostCardDto> aiRecommended = new ArrayList<>();
+            boolean aiSuccess = false;
+
+            if (hasValidPref) {
                 try {
-                    List<PostCardDto> recommended = geminiService.recommendPostCards(
-                            UserPreferenceMapper.toGeminiPrompt(optionalPref.get())
-                    );
-                    if (recommended != null && !recommended.isEmpty()) {
-                        Map<String, Object> response = new HashMap<>();
-                        response.put("total", recommended.size());
-                        response.put("page", page);
-                        response.put("posts", recommended);
-                        return ResponseEntity.ok(response);
-                    }
+                    aiRecommended = geminiService.recommendPostCards(optionalPref.get());
+                    aiSuccess = !aiRecommended.isEmpty();
                 } catch (Exception e) {
-                    System.out.println("Gemini 호출 실패, 일반 목록으로 fallback: " + e.getMessage());
+                    System.out.println("Gemini 추천 실패: " + e.getMessage());
                 }
             }
+
+            long postTotal = postRepository.countByIsDeletedFalse();
+            long total = aiSuccess ? postTotal + 12 : postTotal;
+
+
+            if (page == 1 && aiSuccess) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("total", total);
+                response.put("page", page);
+                response.put("posts", aiRecommended);
+                response.put("isAI", true);
+                return ResponseEntity.ok(response);
+            }
+
 
             PostStatus postStatus = null;
             if (status != null && !status.isBlank()) {
@@ -109,9 +118,10 @@ public class AIController {
                     .toList();
 
             Map<String, Object> response = new HashMap<>();
-            response.put("total", postPage.getTotalElements());
+            response.put("total", total);
             response.put("page", page);
             response.put("posts", posts);
+            response.put("isAI", false);
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {

@@ -4,14 +4,19 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.portiony.portiony.dto.PostCardDto;
 import com.portiony.portiony.entity.Post;
+import com.portiony.portiony.entity.UserPreference;
 import com.portiony.portiony.repository.PostImageRepository;
+import com.portiony.portiony.repository.PostRepository;
+import com.portiony.portiony.util.UserPreferenceMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -24,11 +29,47 @@ public class GeminiService {
     @Value("${gemini.api-key}")
     private String apiKey;
 
+    private final PostRepository postRepository;
     private final PostImageRepository postImageRepository;
 
-    public List<PostCardDto> recommendPostCards(String prompt) throws Exception {
+    public List<PostCardDto> recommendPostCards(UserPreference pref) throws Exception {
+        List<Post> allPosts = postRepository.findAllByIsDeletedFalseOrderByCreatedAtDesc();
+        String prompt = buildPrompt(pref, allPosts);
         String response = callGemini(prompt);
-        return parseRecommended(response);
+        return parseRecommended(response, allPosts);
+    }
+
+    private String buildPrompt(UserPreference pref, List<Post> posts) {
+        StringBuilder sb = new StringBuilder();
+
+        sb.append("아래 조건에 어울리는 공동구매 게시물 중에서 추천할 게시글 12개의 번호만 추려줘. ")
+                .append("결과는 번호만 쉼표로 구분해서 줘. 다른 말은 절대 하지 마. 예: 1, 3, 7\n\n");
+
+        sb.append("조건:\n");
+        if (pref.getPurchaseReason() != 0) {
+            sb.append("- 구매 이유: ").append(UserPreferenceMapper.getPurchaseReason(pref.getPurchaseReason())).append("\n");
+        }
+        if (pref.getSituation() != 0) {
+            sb.append("- 상황: ").append(UserPreferenceMapper.getSituation(pref.getSituation())).append("\n");
+        }
+        if (pref.getMainCategory() != 0) {
+            sb.append("- 관심 카테고리: ").append(UserPreferenceMapper.getCategoryName(pref.getMainCategory())).append("\n");
+        }
+
+        sb.append("\n아래는 추천 대상 게시글 목록이야:\n");
+        int index = 1;
+        for (Post post : posts) {
+            sb.append(index++)
+                    .append(". ")
+                    .append(post.getTitle())
+                    .append(" - ")
+                    .append(post.getDeadline() != null ? post.getDeadline().toLocalDate() : "마감일 없음")
+                    .append(" - ")
+                    .append(post.getStatus().toKorean())
+                    .append("\n");
+        }
+
+        return sb.toString();
     }
 
     private String callGemini(String prompt) throws Exception {
@@ -62,11 +103,13 @@ public class GeminiService {
             if (!response.isSuccessful() || response.body() == null) {
                 throw new RuntimeException("Gemini API 호출 실패: " + response.code());
             }
-            return response.body().string();
+            String responseBody = response.body().string();
+            System.out.println("Gemini 응답: " + responseBody);
+            return responseBody;
         }
     }
 
-    private List<PostCardDto> parseRecommended(String responseBody) throws Exception {
+    private List<PostCardDto> parseRecommended(String responseBody, List<Post> posts) throws Exception {
         ObjectMapper mapper = new ObjectMapper();
         JsonNode root = mapper.readTree(responseBody);
 
@@ -77,24 +120,27 @@ public class GeminiService {
             JsonNode parts = candidates.get(0).path("content").path("parts");
             if (parts.isArray() && parts.size() > 0) {
                 String text = parts.get(0).path("text").asText();
-                // 예시 형식: 1. 복숭아 공동구매 - 7월 31일 마감 - 공구 중
-                String[] lines = text.split("\\n");
-                for (String line : lines) {
-                    String[] partsLine = line.split(" - ");
-                    if (partsLine.length < 3) continue;
+                String[] numbers = text.replaceAll("[^0-9,]", "").split(",");
 
-                    String titlePart = partsLine[0].replaceAll("^\\d+\\.\\s*", "");
-                    String deadline = partsLine[1].replaceAll("[^\\d\\-]", "").trim();
-                    String status = partsLine[2].trim();
-
-                    PostCardDto dto = PostCardDto.builder()
-                            .title(titlePart)
-                            .deadline(deadline.length() == 10 ? java.time.LocalDate.parse(deadline) : null)
-                            .status(status)
-                            .thumbnail(null) // 필요 시 이미지 url 추후 연결
-                            .build();
-
-                    result.add(dto);
+                for (String numStr : numbers) {
+                    try {
+                        int idx = Integer.parseInt(numStr.trim()) - 1;
+                        if (idx >= 0 && idx < posts.size()) {
+                            Post post = posts.get(idx);
+                            PostCardDto dto = PostCardDto.builder()
+                                    .id(post.getId())
+                                    .title(post.getTitle())
+                                    .price(post.getPrice())
+                                    .unit(post.getUnit())
+                                    .capacity(post.getCapacity())
+                                    .completedCount(0)
+                                    .status(post.getStatus().toKorean())
+                                    .deadline(post.getDeadline().toLocalDate())
+                                    .thumbnail(null) // 필요 시 이미지 URL 연결
+                                    .build();
+                            result.add(dto);
+                        }
+                    } catch (NumberFormatException ignored) {}
                 }
             }
         }
