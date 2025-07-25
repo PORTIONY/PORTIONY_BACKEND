@@ -26,9 +26,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
-import org.springframework.http.HttpStatus;
 import org.springframework.beans.factory.annotation.Value;
 
 import java.time.LocalDateTime;
@@ -275,9 +273,9 @@ public class UserService {
             result = Sort.by(Sort.Direction.ASC, "post.createdAt");
         }
 
-        if ("asc".equals(priceSort)) {
+        if ("low".equals(priceSort)) {
             result = result.and(Sort.by(Sort.Direction.ASC, "post.price"));
-        } else if ("desc".equals(priceSort)) {
+        } else if ("high".equals(priceSort)) {
             result = result.and(Sort.by(Sort.Direction.DESC, "post.price"));
         }
 
@@ -480,7 +478,7 @@ public class UserService {
 
         Pageable pageable = PageRequest.of(page - 1, size, getSort(dateSort, priceSort));
 
-        Page<SaleProjectionDto> sales = chatRoomRepository.findSalesWithPost(user.getId(), status, pageable);
+        Page<SaleProjectionDto> sales = chatRoomRepository.findSalesWithPost(userId, status, pageable);
 
         List<SaleHistoryResponse> content = sales.getContent().stream()
                 .map(dto -> {
@@ -557,7 +555,7 @@ public class UserService {
         Sort sortOption = getReviewSort(reviewSort, type);
         Pageable pageable = PageRequest.of(page -1, size, sortOption);
 
-        Page<Review> allReviews = reviewRepository.findAllReviewsByMe(user.getId(), pageable);
+        Page<Review> allReviews = reviewRepository.findAllReviewsByMe(user.getId(), type, writtenStatus, pageable);
 
         List<ReviewHistoryResponse> content = allReviews.getContent().stream()
                 .filter(review -> {
@@ -607,7 +605,7 @@ public class UserService {
         Sort sortOption = getReviewSort(starSort, reviewSort);
         Pageable pageable = PageRequest.of(page - 1, size, sortOption);
 
-        Page<Review> reviews = reviewRepository.findReviewsByOther(user.getId(), type, pageable);
+        Page<Review> reviews = reviewRepository.findReviewsByOther(userId, type, pageable);
 
         List<ReviewHistoryResponse> content = reviews.getContent().stream()
                 .map(review -> {
@@ -640,6 +638,11 @@ public class UserService {
 
         Review review = reviewRepository.findById(reviewId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "해당 리뷰가 존재하지 않습니다."));
+
+        // 이미 리뷰 등록된 경우 방지
+        if (review.getStar() > 0.0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "이미 등록된 리뷰입니다.");
+        }
 
         if (!review.getWriter().getId().equals(user.getId()) &&
                 !review.getTarget().getId().equals(user.getId())) {
@@ -674,11 +677,17 @@ public class UserService {
         Review review = reviewRepository.findById(reviewId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "해당 리뷰가 존재하지 않습니다."));
 
+        // 이미 삭제된 리뷰 방지
+        if (review.getStar() == 0.0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "이미 삭제된 리뷰입니다.");
+        }
+
         // 실제 삭제가아닌 Review DTO에서 isWritten 판단 기준인 star(별점) 기준 및 choice, content 초기값으로 세팅
         // soft-delete 방식 사용
         review.setStar(0.0);
         review.setChoice(null);
         review.setContent(null);
+        reviewRepository.flush();
     }
 
 }

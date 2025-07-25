@@ -17,6 +17,5 @@ public class PostLikeProjectionDto {
     private LocalDateTime deadline;
     private PostStatus status;
     private LocalDateTime likedAt;
-    private Long thumbnailPostId;
     private int capacity;
 }
