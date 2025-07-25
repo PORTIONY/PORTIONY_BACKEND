@@ -43,8 +43,11 @@ public class LocationDataInitializer implements CommandLineRunner {
             String line;
 
             while ((line = reader.readLine()) != null) {
-                String[] tokens = line.split(",");
-                if (tokens.length != 3) continue;
+
+                if (line.isBlank()) continue;
+
+                String[] tokens = line.split(",",-1);
+                if (tokens.length < 3) continue;
 
                 String regionName = tokens[0].trim();
                 String subregionName = tokens[1].trim();

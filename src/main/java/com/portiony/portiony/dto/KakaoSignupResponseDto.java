@@ -8,4 +8,5 @@ import lombok.Data;
 public class KakaoSignupResponseDto {
     private String accessToken;
     private String refreshToken;
+    private Long userId;
 }
