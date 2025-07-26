@@ -8,6 +8,10 @@ import com.portiony.portiony.entity.Post;
 import com.portiony.portiony.entity.PostCategory;
 import com.portiony.portiony.entity.User;
 import com.portiony.portiony.entity.enums.DeliveryMethod;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
+import com.portiony.portiony.entity.enums.PostStatus;
+
 
 public class PostConverter {
     /**
@@ -19,6 +23,13 @@ public class PostConverter {
      * @return Post Entity 객체
      */
     public static Post toPostEntity(CreatePostRequest dto, User user, PostCategory category) {
+        DeliveryMethod deliveryMethod;
+        try {
+            deliveryMethod = DeliveryMethod.valueOf(dto.getDeliveryMethod()); // e.g., "DIRECT"
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "유효하지 않은 배송 방법입니다.");
+        }
+
         return Post.builder()
                 .user(user)
                 .category(category)
@@ -30,6 +41,7 @@ public class PostConverter {
                 .deadline(dto.getDeadline())
                 .deliveryMethod(DeliveryMethod.valueOf(dto.getDeliveryMethod()))
                 .isAgree(dto.getIsAgree())
+                .status(PostStatus.PROGRESS)  // ✅ 명시적으로 기본 상태 할당
                 .build();
     }
 

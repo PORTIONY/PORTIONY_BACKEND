@@ -71,8 +71,9 @@ public class PostController {
     @PatchMapping("/{postId}/status")
     public ResponseEntity<UpdatePostStatusResponse> updateStatus(
             @PathVariable Long postId,
-            @AuthenticationPrincipal CustomUserDetails userDetails){
-        return ResponseEntity.ok(postService.updateStatus(postId, userDetails.getUser().getId()));
+            @RequestBody UpdatePostStatusRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        return ResponseEntity.ok(postService.updateStatus(postId, userDetails.getUser().getId(), request.getStatus()));
     }
 
     @PostMapping("/{postId}/like")

@@ -30,9 +30,9 @@ spring:
       mode: always
 
   profiles:
+    active: dev
     include:
       - database
-      - local
 
   security:
     oauth2:
