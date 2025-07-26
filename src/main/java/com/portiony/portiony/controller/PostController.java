@@ -25,9 +25,10 @@ public class PostController {
     private final PostService postService;
 
     @PostMapping(value = "/", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<CreatePostResponse> createPost(@AuthenticationPrincipal CustomUserDetails userDetails,
-                                                         @RequestPart("post") CreatePostRequest request,
-                                                         @RequestPart("images") List<MultipartFile> files){
+    public ResponseEntity<CreatePostResponse> createPost(
+        @AuthenticationPrincipal CustomUserDetails userDetails,
+        @RequestPart("post") CreatePostRequest request,
+        @RequestPart("images") List<MultipartFile> files){
 
         long postId = postService.createPost(userDetails, request, files);
         return ResponseEntity.ok(new CreatePostResponse(postId));
@@ -56,6 +57,7 @@ public class PostController {
         CreateCommentResponse response = postService.createComment(userDetails, postId, request);
         return ResponseEntity.ok(response);
     }
+
 
     @PatchMapping("/{postId}")
     public ResponseEntity<UpdatePostResponse> updatePost(@AuthenticationPrincipal CustomUserDetails userDetails,

@@ -5,6 +5,7 @@ import com.portiony.portiony.converter.CommentConverter;
 import com.portiony.portiony.converter.PostConverter;
 import com.portiony.portiony.dto.Post.*;
 import com.portiony.portiony.dto.comment.CommentDTO;
+import com.portiony.portiony.dto.comment.CommentUserDTO;
 import com.portiony.portiony.dto.comment.CommentListResponse;
 import com.portiony.portiony.dto.comment.CreateCommentRequest;
 import com.portiony.portiony.dto.comment.CreateCommentResponse;
@@ -64,19 +65,6 @@ public class PostService {
     }
 
 
-    public PostWithCommentsResponse getPostWithComments(Long postId) {
-        Post post = postRepository.findPostById(postId)
-                .orElseThrow(()->new IllegalArgumentException("게시글이 존재하지 않습니다."));
-        Long likeCount = postLikeRepository.countByPostId(postId);
-        List<String> postImage = postImageRepository.findImageUrlsByPostId(postId);
-
-        PostDetailResponse postDetailResponse = PostConverter.toPostDetailResponse(post, likeCount, postImage);
-        Pageable pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt"));
-        CommentListResponse commentListResponse = getCommentsByPostId(postId, pageable);
-
-        return new PostWithCommentsResponse(postDetailResponse,commentListResponse);
-    }
-
     public CreateCommentResponse createComment(CustomUserDetails userDetails,
                                                Long postId,
                                                CreateCommentRequest request) {
@@ -88,8 +76,24 @@ public class PostService {
         PostComment postComment = CommentConverter.toPostCommentEntity(post, currentUser, request);
         PostComment saved = commentRepository.save(postComment);
 
-        return CommentConverter.toCreateCommentsResponse(saved);
+        return CommentConverter.toCreateCommentsResponse(saved); // converter에 있는 걸 사용
     }
+
+    public PostWithCommentsResponse getPostWithComments(Long postId) {
+        Post post = postRepository.findPostById(postId)
+                .orElseThrow(() -> new EntityNotFoundException("게시글이 존재하지 않습니다."));
+
+        Long likeCount = postLikeRepository.countByPostId(postId);
+        List<String> postImage = postImageRepository.findImageUrlsByPostId(postId);
+
+        PostDetailResponse postDetailResponse = PostConverter.toPostDetailResponse(post, likeCount, postImage);
+
+        Pageable pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt"));
+        CommentListResponse commentListResponse = getCommentsByPostId(postId, pageable);
+
+        return new PostWithCommentsResponse(postDetailResponse, commentListResponse);
+    }
+
 
     public CommentListResponse getCommentsByPostId(Long postId, Pageable pageable) {
         postRepository.findPostById(postId)

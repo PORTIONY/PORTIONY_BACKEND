@@ -27,7 +27,7 @@ public class PostConverter {
     public static Post toPostEntity(CreatePostRequest dto, User user, PostCategory category) {
         DeliveryMethod deliveryMethod;
         try {
-            deliveryMethod = DeliveryMethod.valueOf(dto.getDeliveryMethod()); // e.g., "DIRECT"
+            deliveryMethod = DeliveryMethod.valueOf(dto.getDeliveryMethod());
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "유효하지 않은 배송 방법입니다.");
         }
@@ -39,11 +39,12 @@ public class PostConverter {
                 .description(dto.getDescription())
                 .capacity(dto.getCapacity())
                 .price(dto.getPrice())
+                .unitAmount(dto.getUnitAmount()) //  추가
                 .unit(dto.getUnit())
                 .deadline(dto.getDeadline())
-                .deliveryMethod(DeliveryMethod.valueOf(dto.getDeliveryMethod()))
+                .deliveryMethod(deliveryMethod)
                 .isAgree(dto.getIsAgree())
-                .status(PostStatus.PROGRESS)  // ✅ 명시적으로 기본 상태 할당
+                .status(PostStatus.PROGRESS)
                 .build();
     }
 
@@ -70,6 +71,7 @@ public class PostConverter {
                 .description(post.getDescription())
                 .capacity(post.getCapacity())
                 .price(post.getPrice())
+                .unitAmount(post.getUnitAmount()) // 소분량 추가
                 .unit(post.getUnit())
                 .deadline(post.getDeadline())
                 .createdAt(post.getCreatedAt())
@@ -82,15 +84,17 @@ public class PostConverter {
                 .build();
     }
 
-    public static void update(Post post, UpdatePostRequest request, DeliveryMethod method){
+    public static void update(Post post, UpdatePostRequest request, DeliveryMethod method) {
         post.update(
                 request.getTitle(),
                 request.getDescription(),
                 request.getCapacity(),
                 request.getPrice(),
+                request.getUnitAmount(),   // 소분량 추가
                 request.getUnit(),
                 request.getDeadline(),
                 method
         );
     }
 }
+
