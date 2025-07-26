@@ -104,11 +104,9 @@ public class UserController {
     }
 
     // 내 프로필 수정
-    // 추후 s3Service 구현시 주석 해제
-    @PatchMapping("/me") //, consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PatchMapping(value = "/me", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String, String>> editProfile(
-            @AuthenticationPrincipal CustomUserDetails userDetails, @RequestBody EditProfileRequest request) {
-            //@RequestPart(value = "image", required = false) MultipartFile profileImage) {
+            @AuthenticationPrincipal CustomUserDetails userDetails, @ModelAttribute EditProfileRequest request) {
         userService.editProfile(userDetails, request);
         return ResponseEntity.ok(Collections.singletonMap("message", "프로필이 수정되었습니다."));
     }

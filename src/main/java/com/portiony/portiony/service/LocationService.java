@@ -2,6 +2,7 @@ package com.portiony.portiony.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.portiony.portiony.dto.LocationResponseDto;
+import com.portiony.portiony.dto.LocationSearchResponseDto;
 import com.portiony.portiony.entity.Dong;
 import com.portiony.portiony.entity.Region;
 import com.portiony.portiony.entity.Subregion;
@@ -10,9 +11,16 @@ import com.portiony.portiony.repository.RegionRepository;
 import com.portiony.portiony.repository.SubregionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestTemplate;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -60,5 +68,29 @@ public class LocationService {
 
         return new LocationResponseDto(region.getId(), subregion.getId(), dong.getId(), fullAddress);
 
+    }
+
+    public List<LocationSearchResponseDto> searchLocations(String keyword, int page, int size) {
+        if (!StringUtils.hasText(keyword)) {
+            throw new IllegalArgumentException("키워드 누락입니다.");
+        }
+
+        Pageable pageable = PageRequest.of(page - 1, size);
+
+        Page<Dong> dongs = dongRepository.searchByKeyword(keyword.trim(), pageable);
+
+        return dongs.stream()
+                .map(d -> {
+                    var s = d.getSubregion();
+                    var r = s.getRegion();
+                    String address = r.getCity() + " " + s.getDistrict() + " " + d.getDong();
+                    return LocationSearchResponseDto.builder()
+                            .regionId(r.getId())
+                            .subregionId(s.getId())
+                            .dongId(d.getId())
+                            .address(address)
+                            .build();
+                })
+                .collect(Collectors.toList());
     }
 }
