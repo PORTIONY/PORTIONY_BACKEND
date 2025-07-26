@@ -51,7 +51,7 @@ public class PostService {
     public Long createPost(CustomUserDetails userDetails, CreatePostRequest request, List<MultipartFile> files) {
         // 1. 이미지 s3 업로드
         validatePostImageFiles(files);
-        List<String> urls = s3Uploader.upload(files, "post");
+        List<String> urls = s3Uploader.upload(files, "img/post");
 
         try {
             // 2. 게시글 및 메타 데이터 DB 저장
