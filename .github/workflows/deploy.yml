@@ -45,6 +45,10 @@ jobs:
                   value: ${{ secrets.KAKAO_REST_API_KEY }}
                 - name: FRONT_DOMAIN
                   value: ${{ secrets.FRONT_DOMAIN }}
+                - name: S3_ACCESS_KEY
+                  value: ${{ secrets.S3_ACCESS_KEY }}
+                - name: S3_SECRET_KEY
+                  value: ${{ secrets.S3_SECRET_KEY }}
               buildenv: []
             context:
               git:
