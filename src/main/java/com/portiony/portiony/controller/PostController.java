@@ -9,11 +9,14 @@ import com.portiony.portiony.service.PostService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import org.springframework.data.domain.Pageable;
+import org.springframework.web.multipart.MultipartFile;
+import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -21,10 +24,12 @@ import org.springframework.data.domain.Pageable;
 public class PostController {
     private final PostService postService;
 
-    @PostMapping("/")
+    @PostMapping(value = "/", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<CreatePostResponse> createPost(@AuthenticationPrincipal CustomUserDetails userDetails,
-                                                         @RequestBody CreatePostRequest request) {
-        Long postId = postService.createPost(userDetails, request);
+                                                         @RequestPart("post") CreatePostRequest request,
+                                                         @RequestPart("images") List<MultipartFile> files){
+
+        long postId = postService.createPost(userDetails, request, files);
         return ResponseEntity.ok(new CreatePostResponse(postId));
     }
 

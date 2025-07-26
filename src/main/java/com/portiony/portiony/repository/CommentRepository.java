@@ -2,12 +2,12 @@ package com.portiony.portiony.repository;
 
 import com.portiony.portiony.dto.comment.CommentDTO;
 import com.portiony.portiony.entity.PostComment;
+import org.springframework.data.domain.Page;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import org.springframework.data.domain.Pageable;
-import java.util.List;
 
 
 public interface CommentRepository extends JpaRepository<PostComment, Long> {
@@ -19,7 +19,7 @@ public interface CommentRepository extends JpaRepository<PostComment, Long> {
             ") " +
             "FROM PostComment c JOIN c.user u " +
             "WHERE c.post.id = :postId AND c.isDeleted = false")
-    List<CommentDTO> findAllByPostId(@Param("postId") Long postId, Pageable pageable);
+    Page<CommentDTO> findAllByPostId(@Param("postId") Long postId, Pageable pageable);
 
 
     @Query("SELECT COUNT(c) FROM PostComment c WHERE c.post.id = :postId AND c.isDeleted = false")

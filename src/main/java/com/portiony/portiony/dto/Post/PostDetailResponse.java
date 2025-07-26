@@ -28,6 +28,5 @@ public class PostDetailResponse {
     private boolean isAgree;
     private List<String> images;
     private Long likes;
-    private Long commentCount;
     private SellerDTO seller;
 }

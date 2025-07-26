@@ -13,6 +13,8 @@ import org.springframework.http.HttpStatus;
 import com.portiony.portiony.entity.enums.PostStatus;
 
 
+import java.util.List;
+
 public class PostConverter {
     /**
      * 게시글 등록 요청 DTO를 Post Entity로 변환 합니다.
@@ -48,11 +50,11 @@ public class PostConverter {
     /**
      * 게시글 상세 정보에 필요한 Entity를 불러와 PostDetailResponse DTO로 변환합니다.
      * @param post 게시글 상세 정보 Entity
+     * @param likeCount 찜 갯수
+     * @param postImage 상품 이미지 url list
      * @return PostDetailResponse DTO 객체
      */
-    //TODO: 이미지 URL 리스트 추가 (S3연동 후)
-    //TODO: 찜 개수 추가
-    public static PostDetailResponse toPostDetailResponse(Post post) {
+    public static PostDetailResponse toPostDetailResponse(Post post, Long likeCount, List<String> postImage) {
         SellerDTO seller = SellerDTO.builder()
                 .sellerId(post.getUser().getId())
                 .nickname(post.getUser().getNickname())
@@ -74,8 +76,8 @@ public class PostConverter {
                 .status(post.getStatus())
                 .deliveryMethod(post.getDeliveryMethod())
                 .isAgree(post.isAgree())
-                //.images()
-                //.likes()
+                .images(postImage)
+                .likes(likeCount)
                 .seller(seller)
                 .build();
     }

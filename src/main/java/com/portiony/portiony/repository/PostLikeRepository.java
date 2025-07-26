@@ -39,5 +39,9 @@ public interface PostLikeRepository extends JpaRepository<PostLike, Long> {
     Page<PostLikeProjectionDto> findPostLikeWithRegion(@Param("userId") Long userId, @Param("status") PostStatus status, Pageable pageable);
 
     Optional<PostLike> findByPostAndUser(Post post, User user);
+
     boolean existsByPostAndUser(Post post, User user);
+
+    @Query("SELECT COUNT(pl) FROM PostLike pl WHERE pl.post.id = :postId")
+    Long countByPostId(@Param("postId") Long postId);
 }

@@ -12,12 +12,10 @@ public class CreatePostRequest {
     private String title;
     private String description;
     private Integer capacity;
-    //private Integer completedCount;
     private Integer price;
     private String unit;
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSSX")
     private LocalDateTime deadline;
     private String deliveryMethod;
     private Boolean isAgree;
-    //private List<String> images;
 }
