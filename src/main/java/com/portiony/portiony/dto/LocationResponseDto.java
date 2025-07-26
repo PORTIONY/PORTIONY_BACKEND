@@ -9,4 +9,5 @@ public class LocationResponseDto {
     private Long regionId;
     private Long subregionId;
     private Long dongId;
+    private String address;
 }

@@ -23,9 +23,11 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+
 import java.util.List;
 
-
+import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
+@EnableGlobalMethodSecurity(prePostEnabled = true)
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
@@ -66,7 +68,8 @@ public class SecurityConfig {
                                 "/ws-chat-sockjs/**", // SockJS fallback
                                 "/**" //개발용 허용 > 토큰 구현 후 삭제
                         ).permitAll()
-                        .anyRequest().authenticated()
+                        //.anyRequest().authenticated()
+                        .anyRequest().permitAll() // 🔧 인증 없이 모든 요청 허용
                 )
                 .httpBasic(httpBasic -> httpBasic.disable())
                 .formLogin(form -> form.disable())

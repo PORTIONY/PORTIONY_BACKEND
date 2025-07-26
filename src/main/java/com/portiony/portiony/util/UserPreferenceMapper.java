@@ -1,6 +1,9 @@
 package com.portiony.portiony.util;
 
+import com.portiony.portiony.entity.UserPreference;
+
 public class UserPreferenceMapper {
+
     public static String getCategoryName(int code) {
         return switch (code) {
             case 1 -> "의료";
@@ -14,20 +17,20 @@ public class UserPreferenceMapper {
 
     public static String getPurchaseReason(int code) {
         return switch (code) {
-            case 1 -> "꼭 필요한 것만 사요";
-            case 2 -> "좋은 딜이면 뭐든 좋아요";
-            case 3 -> "취미나 수집용이에요";
-            default -> "다른 사람과 나눌 수 있다면 더 좋아요";
+            case 1 -> "꼭 필요한 것만 사는 소비자";
+            case 2 -> "좋은 가격이면 뭐든 사고 싶은 소비자";
+            case 3 -> "취미나 수집 목적으로 구매하는 소비자";
+            default -> "다른 사람과 함께 나누는 걸 선호하는 소비자";
         };
     }
 
     public static String getSituation(int code) {
         return switch (code) {
             case 1 -> "자취 중인 1인 가구";
-            case 2 -> "육아 중인 가구";
-            case 3 -> "강아지/고양이와 함께 살아요";
-            case 4 -> "취미 생활을 즐겨요";
-            default -> "학생이에요";
+            case 2 -> "육아 중인 가족";
+            case 3 -> "반려동물과 함께 사는 사람";
+            case 4 -> "취미 생활을 즐기는 사람";
+            default -> "대학생";
         };
     }
 }

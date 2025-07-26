@@ -10,6 +10,7 @@ import com.portiony.portiony.repository.*;
 import com.portiony.portiony.security.CustomUserDetails;
 import com.portiony.portiony.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -25,9 +26,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
-import org.springframework.http.HttpStatus;
 import org.springframework.beans.factory.annotation.Value;
 
 import java.time.LocalDateTime;
@@ -35,9 +34,12 @@ import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static com.portiony.portiony.entity.enums.ChatStatus.COMPLETED;
+
 @Service
 @RequiredArgsConstructor
 @Transactional
+@Slf4j
 public class UserService {
 
     private final UserRepository userRepository;
@@ -110,18 +112,42 @@ public class UserService {
     }
 
     public LoginResponseDto signup(SignupRequestDto dto) {
+        Optional<User> existing = userRepository.findByEmail(dto.getEmail());
+
+        if (existing.isPresent()) {
+            User user = existing.get();
+
+            if (user.getStatus() == UserStatus.ACTIVE) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 사용 중인 이메일입니다.");
+            }
+
+            if (user.getStatus() == UserStatus.WITHDRAWN) {
+                LocalDateTime withdrawnAt = user.getUpdatedAt();
+                if (withdrawnAt != null && withdrawnAt.isAfter(LocalDateTime.now().minusMonths(1))) {
+                    throw new ResponseStatusException(HttpStatus.FORBIDDEN, "탈퇴 후 1개월 동안 재가입할 수 없습니다.");
+                } else {
+                    // 1개월 지난 계정은 삭제처리
+                    userRepository.delete(user);
+                }
+            }
+        }
+
         User user = createUser(dto);
         saveAgreementsAndPreferences(dto, user);
 
         String accessToken = jwtUtil.generateAccessToken(user.getEmail());
         String refreshToken = refreshTokenService.createRefreshToken(user.getEmail()).getToken();
 
-        return new LoginResponseDto(accessToken, refreshToken);
+        return new LoginResponseDto(accessToken, refreshToken, user.getId());
     }
 
     public LoginResponseDto login(LoginRequestDto dto) {
         User user = userRepository.findByEmail(dto.getEmail())
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 이메일입니다."));
+
+        if (user.getStatus() == UserStatus.WITHDRAWN) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "탈퇴 계정입니다.");
+        }
 
         if (!passwordEncoder.matches(dto.getPassword(), user.getPassword())) {
             throw new IllegalArgumentException("비밀번호가 일치하지 않습니다.");
@@ -130,7 +156,7 @@ public class UserService {
         String accessToken = jwtUtil.generateAccessToken(user.getEmail());
         String refreshToken = refreshTokenService.createRefreshToken(user.getEmail()).getToken();
 
-        return new LoginResponseDto(accessToken, refreshToken);
+        return new LoginResponseDto(accessToken, refreshToken, user.getId());
     }
 
     public Object kakaoLogin(String code) {
@@ -141,7 +167,7 @@ public class UserService {
         LinkedMultiValueMap<String, String> params = new LinkedMultiValueMap<>();
         params.add("grant_type", "authorization_code");
         params.add("client_id", kakaoClientId);
-        params.add("redirect_uri", "http://localhost:3000/login/oauth/kakao"); // 프론트에서 인가코드 받은 주소
+        params.add("redirect_uri", "https://portiony.netlify.app/login/oauth/kakao"); // 프론트에서 인가코드 받은 주소
         params.add("code", code); // 프론트에서 받은 인가 코드
 
         HttpHeaders tokenHeaders = new HttpHeaders();
@@ -189,7 +215,7 @@ public class UserService {
             User user = userOptional.get();
             String jwtAccessToken = jwtUtil.generateAccessToken(user.getEmail());
             String jwtRefreshToken = refreshTokenService.createRefreshToken(user.getEmail()).getToken();
-            return new LoginResponseDto(jwtAccessToken, jwtRefreshToken);
+            return new LoginResponseDto(jwtAccessToken, jwtRefreshToken, user.getId());
         } else {
             // 신규 사용자: 회원가입 요청용 정보 반환
             String nickname = (String) profile.get("nickname");
@@ -224,7 +250,7 @@ public class UserService {
         String accessToken = jwtUtil.generateAccessToken(user.getEmail());
         String refreshToken = refreshTokenService.createRefreshToken(user.getEmail()).getToken();
 
-        return new KakaoSignupResponseDto(accessToken, refreshToken);
+        return new KakaoSignupResponseDto(accessToken, refreshToken, user.getId());
     }
 
     // 이메일 중복 확인
@@ -249,9 +275,9 @@ public class UserService {
             result = Sort.by(Sort.Direction.ASC, "post.createdAt");
         }
 
-        if ("asc".equals(priceSort)) {
+        if ("low".equals(priceSort)) {
             result = result.and(Sort.by(Sort.Direction.ASC, "post.price"));
-        } else if ("desc".equals(priceSort)) {
+        } else if ("high".equals(priceSort)) {
             result = result.and(Sort.by(Sort.Direction.DESC, "post.price"));
         }
 
@@ -309,12 +335,15 @@ public class UserService {
 
         User user = userDetails.getUser();
 
+        int purchaseCount = chatRoomRepository.countPurchases(user.getId());
+        int salesCount = chatRoomRepository.countSales(user.getId());
+
         return UserProfileResponse.builder()
                 .userId(user.getId())
                 .nickname(user.getNickname())
                 .profileImage(user.getProfileImage())
-                .purchasesCount(user.getPurchase_count())
-                .salesCount(user.getSalesCount())
+                .purchasesCount(purchaseCount)
+                .salesCount(salesCount)
                 .positiveRate(user.getStar()) // 임시 값
                 .isMine(true)
                 .build();
@@ -337,7 +366,9 @@ public class UserService {
     @Transactional
     public void editProfile(CustomUserDetails userDetails, EditProfileRequest request) {
 
-        User  user = userDetails.getUser();
+        User user = userRepository.findById(userDetails.getUser().getId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "유저를 찾을 수 없습니다."));
+
 
         //한번 더 검증하기
         if (request.getNickname() != null && !request.getNickname().equals(user.getNickname())) {
@@ -360,8 +391,10 @@ public class UserService {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"현재 비밀번호와 새로운 비밀번호가 일치합니다.");
             }
 
+            log.info("[DEBUG] 수정 전 DB 비밀번호: {}", user.getPassword());
             user.setPassword(passwordEncoder.encode(request.getNewPassword()));
-            System.out.println("[디버그] 인코딩된 새 비밀번호: " + request.getNewPassword());
+            userRepository.saveAndFlush(user);
+            log.info("[DEBUG] 수정 후 DB 비밀번호: {}", userRepository.findById(user.getId()).get().getPassword());
         }
 
         // 프로필 이미지 수정 (s3Service 구현 시 추후 주석 해제)
@@ -381,6 +414,8 @@ public class UserService {
         }
 
         user.setStatus(UserStatus.WITHDRAWN);
+        userRepository.saveAndFlush(user);
+        log.info("[DEBUG] 현재회원상태: {}", user.getStatus());
     }
 
     // 거래 완료 인원 계산(성능 이슈로 추후 디벨롭 때에 쿼리 변경 고민해보기)
@@ -448,7 +483,7 @@ public class UserService {
 
         Pageable pageable = PageRequest.of(page - 1, size, getSort(dateSort, priceSort));
 
-        Page<SaleProjectionDto> sales = chatRoomRepository.findSalesWithPost(user.getId(), status, pageable);
+        Page<SaleProjectionDto> sales = chatRoomRepository.findSalesWithPost(userId, status, pageable);
 
         List<SaleHistoryResponse> content = sales.getContent().stream()
                 .map(dto -> {
@@ -525,7 +560,7 @@ public class UserService {
         Sort sortOption = getReviewSort(reviewSort, type);
         Pageable pageable = PageRequest.of(page -1, size, sortOption);
 
-        Page<Review> allReviews = reviewRepository.findAllReviewsByMe(user.getId(), pageable);
+        Page<Review> allReviews = reviewRepository.findAllReviewsByMe(user.getId(), type, writtenStatus, pageable);
 
         List<ReviewHistoryResponse> content = allReviews.getContent().stream()
                 .filter(review -> {
@@ -575,7 +610,7 @@ public class UserService {
         Sort sortOption = getReviewSort(starSort, reviewSort);
         Pageable pageable = PageRequest.of(page - 1, size, sortOption);
 
-        Page<Review> reviews = reviewRepository.findReviewsByOther(user.getId(), type, pageable);
+        Page<Review> reviews = reviewRepository.findReviewsByOther(userId, type, pageable);
 
         List<ReviewHistoryResponse> content = reviews.getContent().stream()
                 .map(review -> {
@@ -602,28 +637,60 @@ public class UserService {
 
     // 리뷰 등록
     @Transactional
-    public void registerReview(CustomUserDetails userDetails, Long reviewId, ReviewRegisterRequest request) {
+    public Long registerReview(CustomUserDetails userDetails, Long chatRoomId, ReviewRegisterRequest request) {
 
         User user = userDetails.getUser();
 
-        Review review = reviewRepository.findById(reviewId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "해당 리뷰가 존재하지 않습니다."));
+        ChatRoom cr = chatRoomRepository.findById(chatRoomId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "해당 채팅방이 존재하지 않습니다."));
 
-        if (!review.getWriter().getId().equals(user.getId()) &&
-                !review.getTarget().getId().equals(user.getId())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "리뷰 작성 권한이 없습니다.");
+        // 거래 완료 여부 체크
+        if (cr.getSellerStatus() != COMPLETED || cr.getBuyerStatus() != COMPLETED) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "거래 완료된 채팅방만 리뷰를 작성할 수 있습니다.");
         }
 
+        // 참여자여부 판단
+        if (!cr.getBuyer().getId().equals(user.getId()) && !cr.getSeller().getId().equals(user.getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "이 채팅방의 참여자만 리뷰를 작성할 수 있습니다.");
+        }
+
+        User target = cr.getBuyer().getId().equals(user.getId()) ? cr.getSeller() : cr.getBuyer();
+
+        Review review = reviewRepository.findByChatRoomIdAndWriterId(chatRoomId, user.getId())
+                .orElseGet(() ->
+                    Review.builder()
+                        .chatRoom(cr)
+                        .writer(user)
+                        .target(target)
+                        .star(0.0)
+                        .build());
+
+        // 이미 작성된 리뷰 방지
+        if (review.getStar() != 0.0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "이미 등록된 리뷰입니다.");
+        }
+
+        // 검증 로직 실행
+        validateAndApplyReview(request, review);
+        reviewRepository.save(review);
+
+        return review.getId();
+    }
+
+    private void validateAndApplyReview(ReviewRegisterRequest request, Review review) {
         boolean hasChoice = request.getChoice() != null;
         boolean hasContent = request.getContent() != null;
 
         review.setStar(request.getStar());
 
-        // NOT choice && content 검증로직
-        if(hasChoice) {
+        if (hasChoice && hasContent) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "choice와 content는 동시에 보낼 수 없습니다.");
+        }
+
+        if (hasChoice) {
             review.setChoice(request.getChoice());
             review.setContent(null);
-        } else if(hasContent) {
+        } else if (hasContent) {
             review.setContent(request.getContent());
             review.setChoice(null);
         } else {
@@ -635,18 +702,24 @@ public class UserService {
     // 리뷰 삭제
     // 사용자에게 삭제된 것 처럼 보이지만 star, choice, content null 처리 (soft-delete 방식으로 처리)
     @Transactional
-    public void deleteReview(CustomUserDetails userDetails, Long reviewId) {
+    public void deleteReview(CustomUserDetails userDetails, Long chatRoomId) {
 
         User user = userDetails.getUser();
 
-        Review review = reviewRepository.findById(reviewId)
+        Review review = reviewRepository.findByChatRoomIdAndWriterId(chatRoomId, user.getId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "해당 리뷰가 존재하지 않습니다."));
+
+        // 이미 삭제된 리뷰 방지
+        if (review.getStar() == 0.0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "이미 삭제된 리뷰입니다.");
+        }
 
         // 실제 삭제가아닌 Review DTO에서 isWritten 판단 기준인 star(별점) 기준 및 choice, content 초기값으로 세팅
         // soft-delete 방식 사용
         review.setStar(0.0);
         review.setChoice(null);
         review.setContent(null);
+        reviewRepository.flush();
     }
 
 }

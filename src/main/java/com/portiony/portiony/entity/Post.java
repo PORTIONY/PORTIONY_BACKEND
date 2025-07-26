@@ -42,6 +42,7 @@ public class Post extends BaseEntity {
     @Column(nullable = false)
     private int price;
 
+
     @Column(nullable = false, length = 30)
     private String unit;
 
@@ -80,7 +81,20 @@ public class Post extends BaseEntity {
         this.isDeleted = true;
     }
 
-    public void updateStatus(){
-        this.status = PostStatus.DONE;
+    public PostStatus updateStatus() {
+        if (this.status == PostStatus.PROGRESS) {
+            this.status = PostStatus.DONE;
+        } else if (this.status == PostStatus.DONE) {
+            this.status = PostStatus.PROGRESS;
+        }
+        return this.status;
     }
+    public PostStatus updateStatus(PostStatus newStatus) {
+        if (newStatus == null) {
+            throw new IllegalArgumentException("PostStatus는 null일 수 없습니다.");
+        }
+        this.status = newStatus;
+        return this.status;
+    }
+
 }

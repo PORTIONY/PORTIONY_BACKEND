@@ -13,13 +13,13 @@ spring:
     name: portiony
 
   jpa:
-    show-sql: false
+    show-sql: true
     generate-ddl: true
     properties:
       hibernate:
-        show_sql: false
-        format_sql: false
-        use_sql_comments: false
+        show_sql: true
+        format_sql: true
+        use_sql_comments: true
         hbm2ddl:
           auto: update
     database: mysql
@@ -30,9 +30,9 @@ spring:
       mode: always
 
   profiles:
+    active: dev
     include:
       - database
-      - local
 
   security:
     oauth2:
@@ -40,7 +40,7 @@ spring:
         registration:
           kakao:
             client-id: ${KAKAO_REST_API_KEY}
-            redirect-uri: http://localhost:8080/api/users/loQgin/oauth/kakao/callback
+            redirect-uri: https://portiony.netlify.app/login/oauth/kakao
             authorization-grant-type: authorization_code
             client-name: Kakao
             scope: profile_nickname, account_email
@@ -87,3 +87,8 @@ cloud:
 #  domain: ${FRONT_DOMAIN}
 #redis:
 #  domain: ${REDIS_DOMAIN}
+
+portiony:
+  location:
+    init:
+      enabled: false

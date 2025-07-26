@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 @Builder
 public class SaleHistoryResponse {
     private Long postId;
+    private Long chatRoomId;
     private String title;
     private int price;
     private String thumbnail;

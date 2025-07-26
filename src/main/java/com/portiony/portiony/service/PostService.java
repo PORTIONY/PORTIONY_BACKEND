@@ -9,6 +9,7 @@ import com.portiony.portiony.dto.comment.CommentListResponse;
 import com.portiony.portiony.dto.comment.CreateCommentRequest;
 import com.portiony.portiony.dto.comment.CreateCommentResponse;
 import com.portiony.portiony.entity.*;
+import com.portiony.portiony.entity.enums.PostStatus;
 import com.portiony.portiony.entity.enums.DeliveryMethod;
 import com.portiony.portiony.repository.CommentRepository;
 import com.portiony.portiony.repository.PostImageRepository;
@@ -126,11 +127,13 @@ public class PostService {
     }
 
     @Transactional
-    public UpdatePostStatusResponse updateStatus(Long postId, Long currentUserId) {
-        Post post = postRepository.findPostByIdAndUserId(postId, currentUserId).
-                orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "게시글이 없거나 권한이 없습니다."));
-        post.updateStatus();
-        return new UpdatePostStatusResponse();
+    public UpdatePostStatusResponse updateStatus(Long postId, Long currentUserId, PostStatus newStatus) {
+        Post post = postRepository.findPostByIdAndUserId(postId, currentUserId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "게시글이 없거나 권한이 없습니다."));
+
+        post.updateStatus(newStatus);
+
+        return new UpdatePostStatusResponse(post.getStatus());
     }
 
     @Transactional
