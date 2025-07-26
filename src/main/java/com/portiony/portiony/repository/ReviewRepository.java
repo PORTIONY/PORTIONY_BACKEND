@@ -18,7 +18,10 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
 
     @Query("""
     SELECT r FROM Review r JOIN r.chatRoom cr
-    WHERE r.writer.id = :userId 
+    WHERE (cr.buyer.id = :userId OR cr.seller.id = :userId)
+    AND r.writer.id = :userId
+    AND cr.buyerStatus = com.portiony.portiony.entity.enums.ChatStatus.COMPLETED
+    AND cr.sellerStatus = com.portiony.portiony.entity.enums.ChatStatus.COMPLETED
     AND (:type IS NULL OR :type = ''
         OR (:type = 'purchase'  AND cr.buyer.id  = :userId)
         OR (:type = 'sale' AND cr.seller.id = :userId))

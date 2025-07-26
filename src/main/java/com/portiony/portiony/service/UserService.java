@@ -26,6 +26,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.beans.factory.annotation.Value;
 
@@ -56,6 +57,7 @@ public class UserService {
     private final PostImageRepository postImageRepository;
     private final ReviewRepository reviewRepository;
     private final PostLikeRepository postLikeRepository;
+    private final S3Uploader s3Uploader;
 
     @Value("${kakao.rest-api-key}")
     private String kakaoClientId;
@@ -91,6 +93,7 @@ public class UserService {
         return userRepository.save(user);
     }
 
+    // 약관동의 및 선호조사 저장
     private void saveAgreementsAndPreferences(SignupBaseDto dto, User user) {
         UserPreference preference = UserPreference.builder()
                 .user(user)
@@ -111,6 +114,7 @@ public class UserService {
         userAgreementRepository.saveAll(userAgreements);
     }
 
+    // 회원가입
     public LoginResponseDto signup(SignupRequestDto dto) {
         Optional<User> existing = userRepository.findByEmail(dto.getEmail());
 
@@ -141,6 +145,7 @@ public class UserService {
         return new LoginResponseDto(accessToken, refreshToken, user.getId());
     }
 
+    // 일반 로그인
     public LoginResponseDto login(LoginRequestDto dto) {
         User user = userRepository.findByEmail(dto.getEmail())
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 이메일입니다."));
@@ -159,6 +164,7 @@ public class UserService {
         return new LoginResponseDto(accessToken, refreshToken, user.getId());
     }
 
+    // 카카오 로그인
     public Object kakaoLogin(String code) {
 
         // 1. access token 요청
@@ -242,7 +248,7 @@ public class UserService {
         return headers;
     }
 
-
+    // 카카오 최초 로그인 (카카오 회원가입)
     public KakaoSignupResponseDto kakaoSignup(KakaoSignupRequestDto dto) {
         User user = createUser(dto);
         saveAgreementsAndPreferences(dto, user);
@@ -362,7 +368,6 @@ public class UserService {
     }
 
     // 프로필 편집
-    //s3 서비스 구현 시 파라미터에 프로필이미지 추가하기
     @Transactional
     public void editProfile(CustomUserDetails userDetails, EditProfileRequest request) {
 
@@ -397,10 +402,20 @@ public class UserService {
             log.info("[DEBUG] 수정 후 DB 비밀번호: {}", userRepository.findById(user.getId()).get().getPassword());
         }
 
-        // 프로필 이미지 수정 (s3Service 구현 시 추후 주석 해제)
-//        if (profileImage != null && !profileImage.isEmpty()) {
-//            String imageUrl = s3Service.upload(profileImage, "profile-images");
-//            user.setProfileImage(imageUrl);
+        // 프로필 이미지 수정
+        if (request.getProfileImage() != null && !request.getProfileImage().isEmpty()) {
+            List<MultipartFile> fileList = List.of(request.getProfileImage());
+            List<String> urls = s3Uploader.upload(fileList, "img/profile");
+            String imageUrl = urls.get(0);
+
+            // 프사 등록된거 있음 삭제
+            if (user.getProfileImage() != null && !user.getProfileImage().isBlank()) {
+                s3Uploader.deleteList(List.of(user.getProfileImage()));
+            }
+
+            user.setProfileImage(imageUrl);
+            userRepository.saveAndFlush(user);
+        }
     }
 
     // 회원 탈퇴
@@ -563,23 +578,6 @@ public class UserService {
         Page<Review> allReviews = reviewRepository.findAllReviewsByMe(user.getId(), type, writtenStatus, pageable);
 
         List<ReviewHistoryResponse> content = allReviews.getContent().stream()
-                .filter(review -> {
-                    // 후기 작성 여부 필터
-                    if (writtenStatus != null) {
-                        if (writtenStatus && review.getStar() == 0.0) return false;
-                        if (!writtenStatus && review.getStar() != 0.0) return false;
-                    }
-
-                    // 구매/판매 타입 필터
-                    ChatRoom cr = review.getChatRoom();
-                    if (type != null) {
-                        if (type.equals("buyer") && !cr.getBuyer().getId().equals(user.getId())) return false;
-                        if (type.equals("seller") && !cr.getSeller().getId().equals(user.getId())) return false;
-                    }
-
-                    return true;
-                })
-
                 .map(review -> {
                     ChatRoom chatRoom = review.getChatRoom();
                     Post post = chatRoom.getPost();
