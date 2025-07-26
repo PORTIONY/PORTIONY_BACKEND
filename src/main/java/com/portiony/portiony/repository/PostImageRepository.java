@@ -16,5 +16,9 @@ public interface PostImageRepository extends JpaRepository<PostImage, Long> {
     Optional<String> findThumbnailUrlByPostId(@Param("postId") Long postId);
 
     List<PostImage> findAllByPostId(Long postId);
+
     void deleteAllByImageUrlIn(List<String> urls);
+
+    @Query("SELECT pi.imageUrl FROM PostImage pi WHERE pi.post.id = :postId")
+    List<String> findImageUrlsByPostId(@Param("postId") Long postId);
 }

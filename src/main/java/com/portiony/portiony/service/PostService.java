@@ -11,6 +11,7 @@ import com.portiony.portiony.dto.comment.CreateCommentResponse;
 import com.portiony.portiony.entity.*;
 import com.portiony.portiony.entity.enums.DeliveryMethod;
 import com.portiony.portiony.repository.CommentRepository;
+import com.portiony.portiony.repository.PostImageRepository;
 import com.portiony.portiony.repository.PostLikeRepository;
 import com.portiony.portiony.security.CustomUserDetails;
 import jakarta.persistence.EntityNotFoundException;
@@ -37,6 +38,7 @@ public class PostService {
     private final PostLikeRepository postLikeRepository;
     private final S3Uploader s3Uploader;
     private final PostTransactionalService postTransactionalService;
+    private final PostImageRepository postImageRepository;
 
     /**
      * 이미지를 s3 서버에 업로드 하고 메타 데이터, 게시글 데이터를 DB에 저장
@@ -65,7 +67,9 @@ public class PostService {
         Post post = postRepository.findPostById(postId)
                 .orElseThrow(()->new IllegalArgumentException("게시글이 존재하지 않습니다."));
         Long likeCount = postLikeRepository.countByPostId(postId);
-        PostDetailResponse postDetailResponse = PostConverter.toPostDetailResponse(post, likeCount);
+        List<String> postImage = postImageRepository.findImageUrlsByPostId(postId);
+
+        PostDetailResponse postDetailResponse = PostConverter.toPostDetailResponse(post, likeCount, postImage);
         Pageable pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt"));
         CommentListResponse commentListResponse = getCommentsByPostId(postId, pageable);
 
