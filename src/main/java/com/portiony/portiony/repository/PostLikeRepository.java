@@ -26,8 +26,7 @@ public interface PostLikeRepository extends JpaRepository<PostLike, Long> {
         pl.createdAt,
         p.capacity    
     )
-    FROM PostLike pl JOIN pl.post p JOIN p.user u 
-    LEFT JOIN PostImage pi ON pi.post = p
+    FROM PostLike pl JOIN pl.post p JOIN p.user u
     WHERE pl.user.id = :userId
     AND (:status IS NULL OR p.status = :status)
     """,

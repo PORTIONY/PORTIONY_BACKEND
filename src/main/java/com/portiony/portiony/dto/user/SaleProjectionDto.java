@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class SaleProjectionDto {
     private Long postId;
+    private Long chatRoomId;
     private String title;
     private int price;
     private String region;

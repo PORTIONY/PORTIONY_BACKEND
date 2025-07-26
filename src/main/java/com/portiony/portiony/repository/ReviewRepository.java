@@ -9,8 +9,12 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Optional;
+
 @Repository
 public interface ReviewRepository extends JpaRepository<Review, Long> {
+
+    Optional<Review> findByChatRoomIdAndWriterId(Long chatRoomId, Long writerId);
 
     @Query("""
     SELECT r FROM Review r JOIN r.chatRoom cr
