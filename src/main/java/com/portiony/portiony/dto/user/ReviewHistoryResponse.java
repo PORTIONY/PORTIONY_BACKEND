@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 @Builder
 public class ReviewHistoryResponse {
     private Long postId;
+    private Long chatRoomId;
     private Long reviewId;
     private Boolean isWritten;
     private String title;
