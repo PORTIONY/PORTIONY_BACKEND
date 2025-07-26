@@ -54,9 +54,6 @@ spring:
 kakao:
   rest-api-key: ${KAKAO_REST_API_KEY}
 
-gemini:
-  api-key: ${GEMINI_API_KEY}
-
 jwt:
   secret: ${JWT_SECRET_KEY}
   accessExpiration: 86400000 #1일 > 테스트용, 테스트 후 수정 필요
@@ -71,5 +68,19 @@ logging:
 
 frontend:
   domain: ${FRONT_DOMAIN}
+
+cloud:
+  aws:
+    credentials:
+      access-key: ${S3_ACCESS_KEY}
+      secret-key: ${S3_SECRET_KEY}
+    region:
+      static: eu-central-1
+    s3:
+      bucket: portiony-bucket
+    stack:
+      auto: false
+#frontend:
+#  domain: ${FRONT_DOMAIN}
 #redis:
 #  domain: ${REDIS_DOMAIN}
