@@ -19,5 +19,4 @@ public class CreatePostRequest {
     private LocalDateTime deadline;
     private String deliveryMethod;
     private Boolean isAgree;
-    private List<String> images;
 }
