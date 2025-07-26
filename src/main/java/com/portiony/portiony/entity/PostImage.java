@@ -34,4 +34,11 @@ public class PostImage {
 //    public void setPost(Post post) {
 //        this.post = post;
 //    }
+
+
+    public PostImage(String imageUrl, int orderNum, Post post) {
+        this.imageUrl = imageUrl;
+        this.orderNum = orderNum;
+        this.post = post;
+    }
 }

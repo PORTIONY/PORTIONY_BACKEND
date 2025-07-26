@@ -1,5 +1,6 @@
 package com.portiony.portiony.service;
 
+import com.portiony.portiony.controller.PostTransactionalService;
 import com.portiony.portiony.converter.CommentConverter;
 import com.portiony.portiony.converter.PostConverter;
 import com.portiony.portiony.dto.Post.*;
@@ -23,7 +24,10 @@ import org.springframework.stereotype.Service;
 import com.portiony.portiony.repository.PostRepository;
 
 import org.springframework.data.domain.Pageable;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
+
+import java.util.List;
 
 @RequiredArgsConstructor
 @Service
@@ -31,20 +35,29 @@ public class PostService {
     private final PostRepository postRepository;
     private final CommentRepository commentRepository;
     private final PostLikeRepository postLikeRepository;
+    private final S3Uploader s3Uploader;
+    private final PostTransactionalService postTransactionalService;
 
-    @Transactional
-    public Long createPost(CustomUserDetails userDetails, CreatePostRequest request) {
-        User currentUser = userDetails.getUser();
+    /**
+     * 이미지를 s3 서버에 업로드 하고 메타 데이터, 게시글 데이터를 DB에 저장
+     * @param userDetails 로그인 유저 (게시글 작성자)
+     * @param request 작성한 게시글 데이터
+     * @param files 업로드한 파일 데이터
+     * @return 저장된 post Entity id
+     */
 
-        PostCategory category = PostCategory.builder()
-                .id(request.getCategoryId())
-                .build();
+    public Long createPost(CustomUserDetails userDetails, CreatePostRequest request, List<MultipartFile> files) {
+        // 1. 이미지 s3 업로드
+        validatePostImageFiles(files);
+        List<String> urls = s3Uploader.upload(files, "post");
 
-        //Post 생성
-        Post post = PostConverter.toPostEntity(request, currentUser, category);
-
-        Post savedPost = postRepository.save(post);
-        return savedPost.getId();
+        try {
+            // 2. 게시글 및 메타 데이터 DB 저장
+            return postTransactionalService.savePostWithImages(userDetails, request, urls);
+        } catch (Exception e) {
+            s3Uploader.deleteList(urls);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "게시글 업로드 중 오류 발생: ", e);
+        }
     }
 
 
@@ -104,12 +117,8 @@ public class PostService {
         return new UpdatePostResponse();
     }
 
-    @Transactional
     public void deletePost(Long postId, Long currentUserId) {
-        Post post = postRepository.findPostByIdAndUserId(postId, currentUserId).
-                orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "게시글이 없거나 권한이 없습니다."));
-
-        post.delete();
+        postTransactionalService.deletePost(postId, currentUserId);
     }
 
     @Transactional
@@ -151,5 +160,30 @@ public class PostService {
         postLikeRepository.delete(like);
 
         return new LikePostResponse(false);
+    }
+
+    /**
+     * 이미지 업로드를 검증함
+     * @param files 검증할 파일 리스트
+     */
+    public void validatePostImageFiles(List<MultipartFile> files) {
+        if (files == null || files.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "이미지는 최소 1개 이상 업로드해야 합니다.");
+        }
+
+        if (files.size() > 10) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "이미지는 최대 10개 등록 가능 합니다.");
+        }
+
+        for (MultipartFile file : files) {
+            String contentType = file.getContentType();
+            if (contentType == null || !contentType.startsWith("image/")) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "이미지 파일만 업로드 가능합니다.");
+            }
+
+            if (file.getSize() > 5 * 1024 * 1024) { //5MB 제한
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "파일 크기는 5MB 이하만 가능합니다.");
+            }
+        }
     }
 }
