@@ -575,24 +575,21 @@ public class UserService {
         Sort sortOption = getReviewSort(reviewSort, type);
         Pageable pageable = PageRequest.of(page -1, size, sortOption);
 
-        Page<Review> allReviews = reviewRepository.findAllReviewsByMe(user.getId(), type, writtenStatus, pageable);
+        Page<ReviewHistoryProjection> allReviews = reviewRepository.findAllReviewsByMe(user.getId(), type, writtenStatus, pageable);
 
         List<ReviewHistoryResponse> content = allReviews.getContent().stream()
-                .map(review -> {
-                    ChatRoom chatRoom = review.getChatRoom();
-                    Post post = chatRoom.getPost();
-
-                    String reviewType = getReviewType(chatRoom, user.getId());
+                .map(post -> {
 
                     return ReviewHistoryResponse.builder()
-                            .postId(post.getId())
-                            .reviewId(review.getId())
-                            .isWritten(review.getStar() != 0.0)
+                            .postId(post.getPostId())
+                            .chatRoomId(post.getChatRoomId())
+                            .reviewId(post.getReviewId()) //미작성상태일때는 null
+                            .isWritten(post.getIsWritten())
                             .title(post.getTitle())
-                            .type(reviewType)
-                            .transactionDate(chatRoom.getFinishDate())
-                            .choice(review.getChoice())
-                            .content(review.getContent())
+                            .type(post.getType())
+                            .transactionDate(post.getTransactionDate())
+                            .choice(post.getChoice())
+                            .content(post.getContent())
                             .build();
                 })
                 .collect(Collectors.toList());
