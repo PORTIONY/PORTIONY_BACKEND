@@ -91,4 +91,4 @@ cloud:
 portiony:
   location:
     init:
-      enabled: true
+      enabled: false
