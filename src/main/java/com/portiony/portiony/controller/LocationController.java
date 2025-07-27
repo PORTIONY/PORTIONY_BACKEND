@@ -18,12 +18,13 @@ public class LocationController {
 
     private final LocationService locationService;
 
-    // FIXME: 시/군/구 ID 매핑 구현 오류로 임시 수정
     @GetMapping("/resolve")
-    public LocationResponseDto resolveLocation(
-            @RequestParam Long latitude,
-            @RequestParam Long longitude){
-        return locationService.resolveRegionIds(latitude, longitude);
+    public List<LocationSearchResponseDto> resolveLocation(
+            @RequestParam double latitude,
+            @RequestParam double longitude,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size){
+        return locationService.resolveRegionIds(latitude, longitude, page, size);
     }
 
     @GetMapping("/search")

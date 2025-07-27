@@ -34,7 +34,7 @@ public class LocationService {
     @Value("${kakao.rest-api-key}")
     private String kakaoApiKey;
 
-    public LocationResponseDto resolveRegionIds(double lat, double lng) {
+    public List<LocationSearchResponseDto> resolveRegionIds(double lat, double lng, int page, int size) {
         // 카카오 API 호출
         String url = "https://dapi.kakao.com/v2/local/geo/coord2regioncode.json?x=" + lng + "&y=" + lat;
 
@@ -57,18 +57,7 @@ public class LocationService {
 
         String fullAddress = regionName + " " + subregionName + " " + dongName;
 
-        // DB매핑
-        Region region = regionRepository.findByCity(regionName)
-                .orElseThrow(() -> new IllegalArgumentException("해당 region 없음: " + regionName));
-
-        Subregion subregion = subregionRepository.findByDistrictAndRegion(subregionName, region)
-                .orElseThrow(() -> new IllegalArgumentException("해당 subregion 없음: " + subregionName));
-
-        Dong dong = dongRepository.findByDongAndSubregion(dongName, subregion)
-                .orElseThrow(() -> new IllegalArgumentException("해당 동 없음: " + dongName ));
-
-        return new LocationResponseDto(region.getId(), subregion.getId(), dong.getId(), fullAddress);
-
+        return searchLocations(fullAddress, page, size);
     }
 
     public List<LocationSearchResponseDto> searchLocations(String keyword, int page, int size) {
