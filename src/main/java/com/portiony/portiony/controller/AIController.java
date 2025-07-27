@@ -72,7 +72,7 @@ public class AIController {
             long filteredTotal = postPage.getTotalElements();
 
             boolean isFirstPage = page == 1;
-            boolean applyAI = isFirstPage && hasValidPref && filteredTotal > 0;
+            boolean applyAI = isFirstPage && hasValidPref;
 
             List<PostCardDto> aiRecommended = new ArrayList<>();
             if (applyAI) {
@@ -84,7 +84,15 @@ public class AIController {
             }
 
             if (isFirstPage && !aiRecommended.isEmpty()) {
-                long total = filteredTotal + aiRecommended.size();
+                // 일반 게시글 개수만 재조회 (첫 페이지라 limit 걸림)
+                long generalTotal = postRepository.findFilteredPosts(
+                        postStatus, keyword, region, subregion, dong,
+                        PageRequest.of(0, 1)
+                ).getTotalElements();
+
+                long total = generalTotal > 0
+                        ? generalTotal + aiRecommended.size()
+                        : aiRecommended.size(); // 일반 게시글 없으면 AI만으로 total 계산
 
                 Map<String, Object> response = new HashMap<>();
                 response.put("total", total);
@@ -94,7 +102,7 @@ public class AIController {
                 return ResponseEntity.ok(response);
             }
 
-            // 일반 게시글 응답
+            // 일반 게시글 처리 (page > 1 or AI 추천 실패)
             Map<Long, Long> completedCountMap = chatRoomRepository.countCompletedByPostIdGrouped().stream()
                     .collect(Collectors.toMap(
                             obj -> (Long) obj[0],
@@ -116,7 +124,7 @@ public class AIController {
                     .toList();
 
             Map<String, Object> response = new HashMap<>();
-            response.put("total", filteredTotal);
+            response.put("total", filteredTotal); // 일반 게시글 수만 포함
             response.put("page", page);
             response.put("posts", posts);
             response.put("isAI", false);
