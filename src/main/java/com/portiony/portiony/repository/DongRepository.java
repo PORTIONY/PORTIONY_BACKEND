@@ -14,13 +14,13 @@ public interface DongRepository extends JpaRepository<Dong, Long> {
     Optional<Dong> findByDongAndSubregion(String dong, Subregion subregion);
 
     @Query("""
-        SELECT d FROM Dong d JOIN d.subregion s JOIN s.region r
-        WHERE LOWER(d.dong)     LIKE LOWER(CONCAT('%', :k, '%'))
-            OR LOWER(s.district)  LIKE LOWER(CONCAT('%', :k, '%'))
-            OR LOWER(r.city)      LIKE LOWER(CONCAT('%', :k, '%'))
-        ORDER BY r.city, s.district, d.dong
+        SELECT d FROM Dong d
+        JOIN d.subregion s
+        JOIN s.region r
+        WHERE REPLACE(CONCAT(r.city, s.district, d.dong), ' ', '') LIKE CONCAT('%', :keyword, '%')
     """)
-    Page<Dong> searchByKeyword(@Param("k") String keyword, Pageable pageable);
+    Page<Dong> searchByKeyword(@Param("keyword") String keyword, Pageable pageable);
+
 
     @Query("""
         SELECT d from Dong d JOIN FETCH d.subregion s JOIN FETCH s.region r

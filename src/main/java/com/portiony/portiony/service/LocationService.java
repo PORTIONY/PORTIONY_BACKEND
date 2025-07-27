@@ -77,8 +77,9 @@ public class LocationService {
         }
 
         Pageable pageable = PageRequest.of(page - 1, size);
+        String cleanedKeyword = keyword.replaceAll("\\s+", ""); //모든 공백 제거
 
-        Page<Dong> dongs = dongRepository.searchByKeyword(keyword.trim(), pageable);
+        Page<Dong> dongs = dongRepository.searchByKeyword(cleanedKeyword, pageable);
 
         return dongs.stream()
                 .map(d -> {
