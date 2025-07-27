@@ -18,9 +18,13 @@ public class LocationController {
 
     private final LocationService locationService;
 
-    @PostMapping("/resolve")
-    public LocationResponseDto resolveLocation(@RequestBody LocationRequestDto request) {
-        return locationService.resolveRegionIds(request.getLatitude(), request.getLongitude());
+    @GetMapping("/resolve")
+    public List<LocationSearchResponseDto> resolveLocation(
+            @RequestParam double latitude,
+            @RequestParam double longitude,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size){
+        return locationService.resolveRegionIds(latitude, longitude, page, size);
     }
 
     @GetMapping("/search")
