@@ -1,9 +1,8 @@
 package com.portiony.portiony.controller;
 
-import com.portiony.portiony.dto.LocationDetailResponseDto;
-import com.portiony.portiony.dto.LocationRequestDto;
-import com.portiony.portiony.dto.LocationResponseDto;
-import com.portiony.portiony.dto.LocationSearchResponseDto;
+import com.portiony.portiony.dto.location.LocationDetailResponseDto;
+import com.portiony.portiony.dto.location.LocationSearchResponseDto;
+import com.portiony.portiony.dto.location.ResolvedLocationResponseDto;
 import com.portiony.portiony.service.LocationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -19,7 +18,7 @@ public class LocationController {
     private final LocationService locationService;
 
     @GetMapping("/resolve")
-    public List<LocationSearchResponseDto> resolveLocation(
+    public ResolvedLocationResponseDto resolveLocation(
             @RequestParam double latitude,
             @RequestParam double longitude,
             @RequestParam(defaultValue = "1") int page,
