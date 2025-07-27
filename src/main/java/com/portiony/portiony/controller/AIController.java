@@ -10,7 +10,6 @@ import com.portiony.portiony.repository.PostRepository;
 import com.portiony.portiony.repository.UserPreferenceRepository;
 import com.portiony.portiony.security.CustomUserDetails;
 import com.portiony.portiony.service.GeminiService;
-import com.portiony.portiony.util.UserPreferenceMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.http.ResponseEntity;
@@ -55,32 +54,6 @@ public class AIController {
                             optionalPref.get().getPurchaseReason() == 0 &&
                             optionalPref.get().getSituation() == 0);
 
-            List<PostCardDto> aiRecommended = new ArrayList<>();
-            boolean aiSuccess = false;
-
-            if (hasValidPref) {
-                try {
-                    aiRecommended = geminiService.recommendPostCards(optionalPref.get());
-                    aiSuccess = !aiRecommended.isEmpty();
-                } catch (Exception e) {
-                    System.out.println("Gemini 추천 실패: " + e.getMessage());
-                }
-            }
-
-            long postTotal = postRepository.countByIsDeletedFalse();
-            long total = aiSuccess ? postTotal + 12 : postTotal;
-
-
-            if (page == 1 && aiSuccess) {
-                Map<String, Object> response = new HashMap<>();
-                response.put("total", total);
-                response.put("page", page);
-                response.put("posts", aiRecommended);
-                response.put("isAI", true);
-                return ResponseEntity.ok(response);
-            }
-
-
             PostStatus postStatus = null;
             if (status != null && !status.isBlank()) {
                 try {
@@ -94,8 +67,69 @@ public class AIController {
             Long subregion = subregionId != null ? Long.parseLong(subregionId) : null;
             Long dong = dongId != null ? Long.parseLong(dongId) : null;
 
+            boolean isFirstPage = page == 1;
+            boolean applyAI = isFirstPage && hasValidPref;
+
+            List<PostCardDto> aiRecommended = new ArrayList<>();
+            if (applyAI) {
+                try {
+                    aiRecommended = geminiService.recommendPostCards(optionalPref.get());
+                } catch (Exception e) {
+                    System.out.println("Gemini 추천 실패: " + e.getMessage());
+                }
+            }
+
+            // ✅ AI 추천 + 일반 게시글 함께 보여줄 때
+            if (isFirstPage && !aiRecommended.isEmpty()) {
+                int aiCount = aiRecommended.size();
+                int remainingSize = size - aiCount;
+
+                Pageable remainingPageable = PageRequest.of(0, Math.max(0, remainingSize), getSort(sort));
+                Page<Post> generalPostPage = postRepository.findFilteredPosts(postStatus, keyword, region, subregion, dong, remainingPageable);
+
+                long generalTotal = postRepository.findFilteredPosts(
+                        postStatus, keyword, region, subregion, dong,
+                        PageRequest.of(0, 1)
+                ).getTotalElements();
+
+                long total = generalTotal + aiCount;
+
+                Map<Long, Long> completedCountMap = chatRoomRepository.countCompletedByPostIdGrouped().stream()
+                        .collect(Collectors.toMap(
+                                obj -> (Long) obj[0],
+                                obj -> (Long) obj[1]
+                        ));
+
+                List<PostCardDto> generalPosts = generalPostPage.getContent().stream()
+                        .map(post -> PostCardDto.builder()
+                                .id(post.getId())
+                                .title(post.getTitle())
+                                .price(post.getPrice())
+                                .unit(post.getUnit())
+                                .capacity(post.getCapacity())
+                                .completedCount(completedCountMap.getOrDefault(post.getId(), 0L).intValue())
+                                .status(post.getStatus().toKorean())
+                                .deadline(post.getDeadline().toLocalDate())
+                                .thumbnail(getThumbnail(post.getId()))
+                                .build())
+                        .toList();
+
+                List<PostCardDto> combined = new ArrayList<>();
+                combined.addAll(aiRecommended);
+                combined.addAll(generalPosts);
+
+                Map<String, Object> response = new HashMap<>();
+                response.put("total", total);
+                response.put("page", page);
+                response.put("posts", combined);
+                response.put("isAI", true);
+                return ResponseEntity.ok(response);
+            }
+
+            // ✅ 2페이지 이후 또는 AI 실패 시
             Pageable pageable = PageRequest.of(page - 1, size, getSort(sort));
             Page<Post> postPage = postRepository.findFilteredPosts(postStatus, keyword, region, subregion, dong, pageable);
+            long filteredTotal = postPage.getTotalElements();
 
             Map<Long, Long> completedCountMap = chatRoomRepository.countCompletedByPostIdGrouped().stream()
                     .collect(Collectors.toMap(
@@ -118,7 +152,7 @@ public class AIController {
                     .toList();
 
             Map<String, Object> response = new HashMap<>();
-            response.put("total", total);
+            response.put("total", filteredTotal);
             response.put("page", page);
             response.put("posts", posts);
             response.put("isAI", false);

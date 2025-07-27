@@ -1,4 +1,5 @@
 package com.portiony.portiony.dto.Post;
+
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
@@ -9,7 +10,6 @@ import java.util.List;
 
 @Getter
 public class UpdatePostRequest {
-    // TODO: 추후 서버 유효성 검증 도입 시 활성화 예정
 
     @NotBlank(message = "제목 입력은 필수입니다.")
     private String title;
@@ -22,6 +22,9 @@ public class UpdatePostRequest {
 
     @NotNull(message = "가격 입력은 필수입니다.")
     private int price;
+
+    @NotNull(message = "소분 수량 입력은 필수입니다.")
+    private int unitAmount; // 소분량 필드 추가
 
     @NotBlank(message = "단위 입력은 필수입니다.")
     private String unit;
