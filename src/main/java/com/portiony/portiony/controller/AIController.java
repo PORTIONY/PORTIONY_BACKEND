@@ -67,10 +67,6 @@ public class AIController {
             Long subregion = subregionId != null ? Long.parseLong(subregionId) : null;
             Long dong = dongId != null ? Long.parseLong(dongId) : null;
 
-            Pageable pageable = PageRequest.of(page - 1, size, getSort(sort));
-            Page<Post> postPage = postRepository.findFilteredPosts(postStatus, keyword, region, subregion, dong, pageable);
-            long filteredTotal = postPage.getTotalElements();
-
             boolean isFirstPage = page == 1;
             boolean applyAI = isFirstPage && hasValidPref;
 
@@ -83,26 +79,58 @@ public class AIController {
                 }
             }
 
+            // ✅ AI 추천 + 일반 게시글 함께 보여줄 때
             if (isFirstPage && !aiRecommended.isEmpty()) {
-                // 일반 게시글 개수만 재조회 (첫 페이지라 limit 걸림)
+                int aiCount = aiRecommended.size();
+                int remainingSize = size - aiCount;
+
+                Pageable remainingPageable = PageRequest.of(0, Math.max(0, remainingSize), getSort(sort));
+                Page<Post> generalPostPage = postRepository.findFilteredPosts(postStatus, keyword, region, subregion, dong, remainingPageable);
+
                 long generalTotal = postRepository.findFilteredPosts(
                         postStatus, keyword, region, subregion, dong,
                         PageRequest.of(0, 1)
                 ).getTotalElements();
 
-                long total = generalTotal > 0
-                        ? generalTotal + aiRecommended.size()
-                        : aiRecommended.size(); // 일반 게시글 없으면 AI만으로 total 계산
+                long total = generalTotal + aiCount;
+
+                Map<Long, Long> completedCountMap = chatRoomRepository.countCompletedByPostIdGrouped().stream()
+                        .collect(Collectors.toMap(
+                                obj -> (Long) obj[0],
+                                obj -> (Long) obj[1]
+                        ));
+
+                List<PostCardDto> generalPosts = generalPostPage.getContent().stream()
+                        .map(post -> PostCardDto.builder()
+                                .id(post.getId())
+                                .title(post.getTitle())
+                                .price(post.getPrice())
+                                .unit(post.getUnit())
+                                .capacity(post.getCapacity())
+                                .completedCount(completedCountMap.getOrDefault(post.getId(), 0L).intValue())
+                                .status(post.getStatus().toKorean())
+                                .deadline(post.getDeadline().toLocalDate())
+                                .thumbnail(getThumbnail(post.getId()))
+                                .build())
+                        .toList();
+
+                List<PostCardDto> combined = new ArrayList<>();
+                combined.addAll(aiRecommended);
+                combined.addAll(generalPosts);
 
                 Map<String, Object> response = new HashMap<>();
                 response.put("total", total);
                 response.put("page", page);
-                response.put("posts", aiRecommended);
+                response.put("posts", combined);
                 response.put("isAI", true);
                 return ResponseEntity.ok(response);
             }
 
-            // 일반 게시글 처리 (page > 1 or AI 추천 실패)
+            // ✅ 2페이지 이후 또는 AI 실패 시
+            Pageable pageable = PageRequest.of(page - 1, size, getSort(sort));
+            Page<Post> postPage = postRepository.findFilteredPosts(postStatus, keyword, region, subregion, dong, pageable);
+            long filteredTotal = postPage.getTotalElements();
+
             Map<Long, Long> completedCountMap = chatRoomRepository.countCompletedByPostIdGrouped().stream()
                     .collect(Collectors.toMap(
                             obj -> (Long) obj[0],
@@ -124,7 +152,7 @@ public class AIController {
                     .toList();
 
             Map<String, Object> response = new HashMap<>();
-            response.put("total", filteredTotal); // 일반 게시글 수만 포함
+            response.put("total", filteredTotal);
             response.put("page", page);
             response.put("posts", posts);
             response.put("isAI", false);
