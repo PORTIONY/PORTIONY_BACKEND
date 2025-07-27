@@ -13,59 +13,41 @@ import java.util.List;
 
 public interface PostRepository extends JpaRepository<Post, Long> {
 
-    /**
-     * 상세 게시글 조회
-     */
     @Query("SELECT p FROM Post p " +
             "JOIN FETCH p.user " +
             "WHERE p.id = :postId AND p.isDeleted = false")
     Optional<Post> findPostById(@Param("postId") Long postId);
 
-    /**
-     * 게시글 업데이트를 위한 검증
-     */
     @Query("SELECT p FROM Post p " +
             "JOIN FETCH p.user " +
             "WHERE p.id = :postId and p.user.id = :userId AND p.isDeleted = false")
     Optional<Post> findPostByIdAndUserId(@Param("postId") Long postId, @Param("userId") Long userId);
 
-    /**
-     * 카테고리 기준 게시글 조회 (삭제되지 않은 것만)
-     */
     List<Post> findAllByIsDeletedFalseAndCategory_Id(Long categoryId);
 
-    /**
-     * 최신순 게시글 조회
-     */
     @Query("SELECT p FROM Post p WHERE p.isDeleted = false ORDER BY p.createdAt DESC")
     Page<Post> findRecentPosts(Pageable pageable);
 
-    /**
-     * 필터링 조건이 있는 게시글 조회
-     */
+    // ✅ 카테고리 필터 추가됨
     @Query("SELECT p FROM Post p " +
             "WHERE p.isDeleted = false " +
             "AND (:status IS NULL OR p.status = :status) " +
             "AND (:keyword IS NULL OR p.title LIKE %:keyword%) " +
             "AND (:regionId IS NULL OR p.user.region.id = :regionId) " +
             "AND (:subregionId IS NULL OR p.user.subregion.id = :subregionId) " +
-            "AND (:dongId IS NULL OR p.user.dong.id = :dongId)")
+            "AND (:dongId IS NULL OR p.user.dong.id = :dongId) " +
+            "AND (:categoryCode IS NULL OR p.category.code = :categoryCode)")
     Page<Post> findFilteredPosts(
             @Param("status") PostStatus status,
             @Param("keyword") String keyword,
             @Param("regionId") Long regionId,
             @Param("subregionId") Long subregionId,
             @Param("dongId") Long dongId,
+            @Param("categoryCode") String categoryCode,
             Pageable pageable
     );
 
-    /**
-     * AI 추천용 - 전체 게시글 조회
-     */
     List<Post> findAllByIsDeletedFalseOrderByCreatedAtDesc();
 
-    /**
-     * 전체 게시글 수 조회 (삭제되지 않은 것만)
-     */
     long countByIsDeletedFalse();
 }

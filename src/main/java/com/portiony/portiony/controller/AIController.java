@@ -39,7 +39,8 @@ public class AIController {
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String regionId,
             @RequestParam(required = false) String subregionId,
-            @RequestParam(required = false) String dongId
+            @RequestParam(required = false) String dongId,
+            @RequestParam(required = false) String selectedCategory // 프론트에서 보내는 사람용 이름
     ) {
         try {
             Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
@@ -67,6 +68,8 @@ public class AIController {
             Long subregion = subregionId != null ? Long.parseLong(subregionId) : null;
             Long dong = dongId != null ? Long.parseLong(dongId) : null;
 
+            String categoryCode = mapCategoryNameToCode(selectedCategory);
+
             boolean isFirstPage = page == 1;
             boolean applyAI = isFirstPage && hasValidPref;
 
@@ -79,16 +82,17 @@ public class AIController {
                 }
             }
 
-            // ✅ AI 추천 + 일반 게시글 함께 보여줄 때
             if (isFirstPage && !aiRecommended.isEmpty()) {
                 int aiCount = aiRecommended.size();
                 int remainingSize = size - aiCount;
 
                 Pageable remainingPageable = PageRequest.of(0, Math.max(0, remainingSize), getSort(sort));
-                Page<Post> generalPostPage = postRepository.findFilteredPosts(postStatus, keyword, region, subregion, dong, remainingPageable);
+                Page<Post> generalPostPage = postRepository.findFilteredPosts(
+                        postStatus, keyword, region, subregion, dong, categoryCode, remainingPageable
+                );
 
                 long generalTotal = postRepository.findFilteredPosts(
-                        postStatus, keyword, region, subregion, dong,
+                        postStatus, keyword, region, subregion, dong, categoryCode,
                         PageRequest.of(0, 1)
                 ).getTotalElements();
 
@@ -126,9 +130,10 @@ public class AIController {
                 return ResponseEntity.ok(response);
             }
 
-            // ✅ 2페이지 이후 또는 AI 실패 시
             Pageable pageable = PageRequest.of(page - 1, size, getSort(sort));
-            Page<Post> postPage = postRepository.findFilteredPosts(postStatus, keyword, region, subregion, dong, pageable);
+            Page<Post> postPage = postRepository.findFilteredPosts(
+                    postStatus, keyword, region, subregion, dong, categoryCode, pageable
+            );
             long filteredTotal = postPage.getTotalElements();
 
             Map<Long, Long> completedCountMap = chatRoomRepository.countCompletedByPostIdGrouped().stream()
@@ -162,6 +167,32 @@ public class AIController {
             return ResponseEntity.internalServerError().body("추천 실패: " + e.getClass().getSimpleName() + " - " + e.getMessage());
         }
     }
+
+    private String mapCategoryNameToCode(String name) {
+        if (name == null || name.equals("전체") || name.isBlank()) {
+            return null;
+        }
+
+        switch (name) {
+            case "생활용품":
+                return "C001";
+            case "반려동물":
+                return "C002";
+            case "의류":
+                return "C003";
+            case "문구류":
+                return "C004";
+            case "육아용품":
+                return "C005";
+            case "화장품/뷰티":
+                return "C006";
+            case "잡화/기타":
+                return "C007";
+            default:
+                return null;
+        }
+    }
+
 
     private Sort getSort(String sortType) {
         if ("oldest".equalsIgnoreCase(sortType)) {
