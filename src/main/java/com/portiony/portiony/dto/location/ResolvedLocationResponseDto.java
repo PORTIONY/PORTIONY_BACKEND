@@ -9,5 +9,5 @@ import java.util.List;
 @AllArgsConstructor
 public class ResolvedLocationResponseDto {
     private String currentAddress;
-    private List<LocationSearchResponseDto> locationSearchResponseDto;
+    private List<LocationSearchResponseDto> results;
 }
