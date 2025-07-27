@@ -1,4 +1,4 @@
-package com.portiony.portiony.dto;
+package com.portiony.portiony.dto.location;
 
 import lombok.Getter;
 import lombok.Setter;

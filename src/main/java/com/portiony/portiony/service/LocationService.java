@@ -1,9 +1,9 @@
 package com.portiony.portiony.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.portiony.portiony.dto.LocationDetailResponseDto;
-import com.portiony.portiony.dto.LocationResponseDto;
-import com.portiony.portiony.dto.LocationSearchResponseDto;
+import com.portiony.portiony.dto.location.LocationDetailResponseDto;
+import com.portiony.portiony.dto.location.LocationSearchResponseDto;
+import com.portiony.portiony.dto.location.ResolvedLocationResponseDto;
 import com.portiony.portiony.entity.Dong;
 import com.portiony.portiony.entity.Region;
 import com.portiony.portiony.entity.Subregion;
@@ -34,7 +34,7 @@ public class LocationService {
     @Value("${kakao.rest-api-key}")
     private String kakaoApiKey;
 
-    public List<LocationSearchResponseDto> resolveRegionIds(double lat, double lng, int page, int size) {
+    public ResolvedLocationResponseDto resolveRegionIds(double lat, double lng, int page, int size) {
         // 카카오 API 호출
         String url = "https://dapi.kakao.com/v2/local/geo/coord2regioncode.json?x=" + lng + "&y=" + lat;
 
@@ -57,7 +57,7 @@ public class LocationService {
 
         String fullAddress = regionName + " " + subregionName + " " + dongName;
 
-        return searchLocations(fullAddress, page, size);
+        return new ResolvedLocationResponseDto(fullAddress, searchLocations(fullAddress, page, size));
     }
 
     public List<LocationSearchResponseDto> searchLocations(String keyword, int page, int size) {
