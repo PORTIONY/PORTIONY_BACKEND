@@ -18,9 +18,12 @@ public class LocationController {
 
     private final LocationService locationService;
 
-    @PostMapping("/resolve")
-    public LocationResponseDto resolveLocation(@RequestBody LocationRequestDto request) {
-        return locationService.resolveRegionIds(request.getLatitude(), request.getLongitude());
+    // FIXME: 시/군/구 ID 매핑 구현 오류로 임시 수정
+    @GetMapping("/resolve")
+    public LocationResponseDto resolveLocation(
+            @RequestParam Long latitude,
+            @RequestParam Long longitude){
+        return locationService.resolveRegionIds(latitude, longitude);
     }
 
     @GetMapping("/search")
