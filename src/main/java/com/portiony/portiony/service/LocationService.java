@@ -1,6 +1,7 @@
 package com.portiony.portiony.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.portiony.portiony.dto.LocationDetailResponseDto;
 import com.portiony.portiony.dto.LocationResponseDto;
 import com.portiony.portiony.dto.LocationSearchResponseDto;
 import com.portiony.portiony.entity.Dong;
@@ -92,5 +93,25 @@ public class LocationService {
                             .build();
                 })
                 .collect(Collectors.toList());
+    }
+
+    public LocationDetailResponseDto getByDongId(Long dongId) {
+        Dong dong = dongRepository.findAddressByDongId(dongId)
+                .orElseThrow(() -> new IllegalArgumentException("해당 동이 존재하지 않습니다. dongId=" + dongId));
+
+        Subregion subregion = dong.getSubregion();
+        Region region = subregion.getRegion();
+
+        String address = region.getCity() + " " + subregion.getDistrict() + " " + dong.getDong();
+
+        return LocationDetailResponseDto.builder()
+                .regionId(region.getId())
+                .regionName(region.getCity())
+                .subregionId(subregion.getId())
+                .subregionName(subregion.getDistrict())
+                .dongId(dong.getId())
+                .dongName(dong.getDong())
+                .address(address)
+                .build();
     }
 }
