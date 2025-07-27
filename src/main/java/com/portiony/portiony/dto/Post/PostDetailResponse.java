@@ -20,6 +20,7 @@ public class PostDetailResponse {
     private String description;
     private int capacity;
     private int price;
+    private int unitAmount;          // 소분량 추가
     private String unit;
     private LocalDateTime deadline;
     private LocalDateTime createdAt;
